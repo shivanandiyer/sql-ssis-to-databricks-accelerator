@@ -1,0 +1,164 @@
+{
+  "generated_at": "2026-06-30T04:39:12.122656+00:00",
+  "total_duration_seconds": 5.49,
+  "steps_total": 11,
+  "steps_passed": 10,
+  "steps_partial": 1,
+  "steps_failed": 0,
+  "overall_status": "PARTIAL",
+  "steps": [
+    {
+      "step": 1,
+      "name": "Parse source repo",
+      "status": "PASS",
+      "duration_seconds": 3.996,
+      "evidence": {
+        "oltp_files_parsed": 283,
+        "dw_files_parsed": 71,
+        "ssis_packages_parsed": 1,
+        "unreadable_files": 0
+      }
+    },
+    {
+      "step": 2,
+      "name": "Extract object inventory",
+      "status": "PARTIAL",
+      "duration_seconds": 0.017,
+      "evidence": {
+        "total_objects": 431,
+        "unsupported_count": 18,
+        "avg_conversion_confidence": 0.724,
+        "object_type_breakdown": {
+          "PROCEDURE": 157,
+          "SCALAR_FUNCTION": 10,
+          "SCHEMA": 19,
+          "SEQUENCE": 34,
+          "SSIS_DATA_FLOW": 13,
+          "SSIS_EXECUTE_SQL": 53,
+          "SSIS_EXPRESSION": 15,
+          "SSIS_PACKAGE": 1,
+          "SSIS_SEQUENCE_CONTAINER": 13,
+          "TABLE": 84,
+          "TVF_INLINE": 2,
+          "USER_DEFINED_TYPE": 4,
+          "VIEW": 26
+        },
+        "known_misparsed_names_found": [
+          "OLTP:dbo.Application",
+          "OLTP:dbo.DataLoadSimulation",
+          "OLTP:dbo.Integration"
+        ]
+      },
+      "failure_reason": "Object name-extraction fallback still misparses some multi-word GRANT/security statement files (e.g. 'External Sales.sql' -> dbo.External) \u2014 cosmetic, routed to SECURITY/unsupported, doesn't affect functional conversion.",
+      "failure_category": "implementation_bug",
+      "severity": "NON_BLOCKING"
+    },
+    {
+      "step": 3,
+      "name": "Build dependency graph",
+      "status": "PASS",
+      "duration_seconds": 0.013,
+      "evidence": {
+        "node_count": 414,
+        "edge_count": 584,
+        "has_cycles": false,
+        "etl_lineage_targets": 14
+      }
+    },
+    {
+      "step": 4,
+      "name": "Produce documentation",
+      "status": "PASS",
+      "duration_seconds": 0.005,
+      "evidence": {
+        "markdown_bytes": 44937,
+        "json_bytes": 7693,
+        "sections_with_confidence": 14
+      }
+    },
+    {
+      "step": 5,
+      "name": "Produce impact analysis",
+      "status": "PASS",
+      "duration_seconds": 0.314,
+      "evidence": {
+        "object_count": 431,
+        "classification_distribution": {
+          "Lift-and-shift friendly": 83,
+          "Partial automation possible": 179,
+          "Rewrite required": 63,
+          "Manual redesign required": 106
+        }
+      }
+    },
+    {
+      "step": 6,
+      "name": "Recommend target architecture",
+      "status": "PASS",
+      "duration_seconds": 0.006,
+      "evidence": {
+        "chosen_architecture": "medallion",
+        "medallion_layer_distribution": {
+          "BRONZE": 72,
+          "SILVER": 34,
+          "GOLD": 6
+        }
+      }
+    },
+    {
+      "step": 7,
+      "name": "Convert SQL objects",
+      "status": "PASS",
+      "duration_seconds": 0.076,
+      "evidence": {
+        "objects_processed": 279,
+        "needs_review_count": 201,
+        "exceptions_raised": 0
+      }
+    },
+    {
+      "step": 8,
+      "name": "Convert SSIS packages",
+      "status": "PASS",
+      "duration_seconds": 0.055,
+      "evidence": {
+        "workflow_tasks_generated": 81,
+        "connection_managers_mapped": 2,
+        "variables_mapped": 4
+      }
+    },
+    {
+      "step": 9,
+      "name": "Build deployment artifacts",
+      "status": "PASS",
+      "duration_seconds": 0.001,
+      "evidence": {
+        "task_file_references_checked": 81,
+        "broken_references": 0,
+        "broken_reference_paths_sample": []
+      }
+    },
+    {
+      "step": 10,
+      "name": "Run automated tests",
+      "status": "PASS",
+      "duration_seconds": 1.002,
+      "evidence": {
+        "pytest_exit_code": 0,
+        "passed": 117,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "step": 11,
+      "name": "Compare outputs with golden results",
+      "status": "PASS",
+      "duration_seconds": 0.004,
+      "evidence": {
+        "golden_cases_checked": 2,
+        "mismatches": 0
+      }
+    }
+  ]
+}

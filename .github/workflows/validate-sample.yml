@@ -1,0 +1,84 @@
+name: Validate Against Sample Corpus
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Every Monday at 06:00 UTC — catches drift caused by upstream changes to
+    # the microsoft/sql-server-samples repo itself, not just our own code.
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}   # allow manual runs from the Actions tab
+
+jobs:
+  validate:
+    name: End-to-end validation against Wide World Importers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout accelerator
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Sparse-clone the Wide World Importers sample
+        # run_analysis.py / run_validation.py expect the sample corpus as a
+        # sibling directory: <workspace-parent>/sql-server-samples — one
+        # level above this checkout, matching the local dev layout described
+        # in the README quickstart.
+        run: |
+          cd "${{ github.workspace }}/.."
+          git clone --no-checkout --depth 1 https://github.com/microsoft/sql-server-samples.git sql-server-samples
+          cd sql-server-samples
+          git sparse-checkout init --cone
+          git sparse-checkout set samples/databases/wide-world-importers
+          git checkout main
+
+      - name: Run the full accelerator pipeline
+        run: |
+          python run_analysis.py
+          python run_impact_analysis.py
+          python run_target_state_design.py
+          python run_conversion.py
+          python run_ssis_conversion.py
+          python run_test_matrix.py
+
+      - name: Run end-to-end validation
+        id: validation
+        # run_validation.py exits non-zero if any step has a BLOCKING failure
+        # (a hard FAIL, not the PARTIAL state this project treats as
+        # acceptable-by-design) — that's the actual pass/fail signal for
+        # this job, not just "did the script run."
+        run: python run_validation.py
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: |
+            docs/example-run/validation_summary.md
+            docs/example-run/validation_results.json
+            docs/example-run/failed_cases.json
+          retention-days: 90
+
+      - name: Upload full pipeline output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-output
+          path: |
+            outputs/
+            output/
+          retention-days: 14
+
+      - name: Summarize result
+        if: always()
+        run: |
+          if [ -f docs/example-run/validation_summary.md ]; then
+            echo "## Validation Summary" >> "$GITHUB_STEP_SUMMARY"
+            cat docs/example-run/validation_summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi

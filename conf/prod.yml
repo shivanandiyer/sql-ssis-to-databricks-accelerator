@@ -1,0 +1,35 @@
+# Environment parameters for prod.
+# Promotion requires the test.yml checklist to be complete and signed off —
+# see ../deploy/promote.sh and ../deploy/rollback.md.
+
+environment: prod
+catalog: wwi_prod
+schemas:
+  bronze: bronze
+  silver: silver
+  gold: gold
+  ops: ops
+
+unity_catalog:
+  workspace_host: "https://<prod-workspace>.cloud.databricks.com"
+  service_principal: "<TODO: prod service principal application id>"
+
+sql_warehouse:
+  use_bundle_managed: true
+  warehouse_id: null
+
+job:
+  pause_status: UNPAUSED     # only environment where the daily schedule actually runs
+  alert_email: "data-eng-oncall@example.com"
+  max_concurrent_runs: 1
+
+secrets:
+  scope: wwi-source-db-prod
+  keys: [jdbc_url, username, password]
+
+data_volume_profile: production
+
+access_control:
+  can_view: [data-engineering]
+  can_manage_run: ["<TODO: prod service principal>"]
+  can_manage: ["<TODO: platform admin group>"]

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref (e.g. new pushes to a PR branch).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+      - name: ruff check
+        run: ruff check accelerator/ run_*.py deploy/ tests/ bundle/src/
+
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+      - name: mypy
+        run: >
+          mypy accelerator/
+          run_analysis.py run_impact_analysis.py run_target_state_design.py
+          run_conversion.py run_ssis_conversion.py run_test_matrix.py run_validation.py
+
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+      - name: Run accelerator pipeline test suite with coverage
+        run: >
+          pytest tests/ -v
+          --cov=accelerator --cov-report=term --cov-report=xml --cov-report=html
+      - name: Run deployment runtime package tests
+        run: pytest bundle/src/tests/ -v
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        # One upload per matrix leg is enough signal; avoid 3x redundant
+        # artifacts for the same coverage data by only uploading from 3.12.
+        if: matrix.python-version == '3.12'
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 30

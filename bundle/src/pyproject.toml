@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wwi-accelerator-runtime"
+version = "0.1.0"
+description = "Shared runtime helpers for WWI Modernisation Accelerator converted tasks"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+include = ["wwi_accelerator*"]

@@ -1,0 +1,70 @@
+# Databricks Asset Bundle — WWI Modernisation Accelerator
+#
+# Deploy with:
+#   databricks bundle validate -t dev
+#   databricks bundle deploy   -t dev
+#   databricks bundle run wwi_dailyetlmain -t dev
+#
+# See ../README.md for the full deployment guide, ../conf/*.yml for
+# per-environment values, and ../deploy/ for pre/post-deploy scripts.
+
+bundle:
+  name: wwi-modernisation
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog this environment writes to.
+  sql_warehouse_id:
+    description: Serverless SQL warehouse ID used by sql_task entries (set per environment in conf/).
+  job_pause_status:
+    description: UNPAUSED in prod, PAUSED elsewhere by default so dev/test runs are manual-only.
+    default: PAUSED
+  alert_email:
+    description: Distribution list notified on job failure.
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://<dev-workspace>.cloud.databricks.com
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: wwi_dev
+      sql_warehouse_id: "<TODO: dev warehouse id, or omit to use the bundle-managed wwi_warehouse resource>"
+      job_pause_status: PAUSED
+      alert_email: "data-eng-dev@example.com"
+
+  test:
+    mode: development
+    workspace:
+      host: https://<test-workspace>.cloud.databricks.com
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: wwi_test
+      sql_warehouse_id: "<TODO: test warehouse id>"
+      job_pause_status: PAUSED
+      alert_email: "data-eng-test@example.com"
+    run_as:
+      service_principal_name: "<TODO: test service principal>"
+
+  prod:
+    mode: production
+    workspace:
+      host: https://<prod-workspace>.cloud.databricks.com
+      root_path: /Workspace/Shared/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: wwi_prod
+      sql_warehouse_id: "<TODO: prod warehouse id>"
+      job_pause_status: UNPAUSED
+      alert_email: "data-eng-oncall@example.com"
+    run_as:
+      service_principal_name: "<TODO: prod service principal>"
+    permissions:
+      - group_name: data-engineering
+        level: CAN_VIEW
+      - service_principal_name: "<TODO: prod service principal>"
+        level: CAN_MANAGE_RUN

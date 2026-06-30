@@ -1,0 +1,9 @@
+# Core accelerator pipeline (parsers, analyzers, converters, run_*.py
+# scripts) is pure Python standard library — nothing to install to run it.
+#
+# This file covers everything needed to develop on and test the accelerator.
+# For optional live-deployment execution (deploy/sql_deploy.py,
+# deploy/validate_deployment.py against a real Databricks workspace), also
+# install: pip install databricks-sql-connector>=3.0
+
+pytest>=8.0

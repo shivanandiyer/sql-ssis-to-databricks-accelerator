@@ -1,0 +1,31 @@
+# Environment parameters for dev.
+# Consumed by bundle/databricks.yml's `targets.dev.variables` (kept here as
+# the single source of truth so deploy/ scripts can read the same values
+# without parsing YAML-in-YAML from the bundle file).
+
+environment: dev
+catalog: wwi_dev
+schemas:
+  bronze: bronze
+  silver: silver
+  gold: gold
+  ops: ops
+
+unity_catalog:
+  workspace_host: "https://<dev-workspace>.cloud.databricks.com"
+  service_principal: null   # interactive/dev deploys run as the calling user
+
+sql_warehouse:
+  use_bundle_managed: true  # provision via bundle/resources/sql_warehouse.yml
+  warehouse_id: null
+
+job:
+  pause_status: PAUSED      # dev runs are manual (bundle run), never scheduled
+  alert_email: "data-eng-dev@example.com"
+  max_concurrent_runs: 1
+
+secrets:
+  scope: wwi-source-db-dev
+  keys: [jdbc_url, username, password]
+
+data_volume_profile: small_sample   # safe to run full pipeline against a sample/synthetic dataset

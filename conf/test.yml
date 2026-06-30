@@ -1,0 +1,34 @@
+# Environment parameters for test.
+# Promotion target after dev validation passes (see ../deploy/promote.sh).
+
+environment: test
+catalog: wwi_test
+schemas:
+  bronze: bronze
+  silver: silver
+  gold: gold
+  ops: ops
+
+unity_catalog:
+  workspace_host: "https://<test-workspace>.cloud.databricks.com"
+  service_principal: "<TODO: test service principal application id>"
+
+sql_warehouse:
+  use_bundle_managed: true
+  warehouse_id: null
+
+job:
+  pause_status: PAUSED       # test runs are triggered by CI, not on a schedule
+  alert_email: "data-eng-test@example.com"
+  max_concurrent_runs: 1
+
+secrets:
+  scope: wwi-source-db-test
+  keys: [jdbc_url, username, password]
+
+data_volume_profile: full_reference_dataset   # full WWI reference corpus, no PII
+
+required_before_promotion_to_prod:
+  - test_matrix.csv Tier 1-3 cases pass against this catalog
+  - reconciliation row counts match within tolerance for all 14 dimension/fact targets
+  - manual sign-off recorded for every object in manual_intervention_list.md

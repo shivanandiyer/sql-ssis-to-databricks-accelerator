@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-06-30T04:39:12.124457+00:00",
+  "failed_case_count": 1,
+  "cases": [
+    {
+      "step": 2,
+      "name": "Extract object inventory",
+      "status": "PARTIAL",
+      "duration_seconds": 0.017,
+      "evidence": {
+        "total_objects": 431,
+        "unsupported_count": 18,
+        "avg_conversion_confidence": 0.724,
+        "object_type_breakdown": {
+          "PROCEDURE": 157,
+          "SCALAR_FUNCTION": 10,
+          "SCHEMA": 19,
+          "SEQUENCE": 34,
+          "SSIS_DATA_FLOW": 13,
+          "SSIS_EXECUTE_SQL": 53,
+          "SSIS_EXPRESSION": 15,
+          "SSIS_PACKAGE": 1,
+          "SSIS_SEQUENCE_CONTAINER": 13,
+          "TABLE": 84,
+          "TVF_INLINE": 2,
+          "USER_DEFINED_TYPE": 4,
+          "VIEW": 26
+        },
+        "known_misparsed_names_found": [
+          "OLTP:dbo.Application",
+          "OLTP:dbo.DataLoadSimulation",
+          "OLTP:dbo.Integration"
+        ]
+      },
+      "failure_reason": "Object name-extraction fallback still misparses some multi-word GRANT/security statement files (e.g. 'External Sales.sql' -> dbo.External) \u2014 cosmetic, routed to SECURITY/unsupported, doesn't affect functional conversion.",
+      "failure_category": "implementation_bug",
+      "severity": "NON_BLOCKING"
+    }
+  ]
+}
