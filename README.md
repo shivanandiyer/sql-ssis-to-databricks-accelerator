@@ -48,6 +48,13 @@ as a worked example — see `docs/example-run/` for the actual generated
 output of a full run, including an adversarial review of its own
 correctness (`docs/example-run/adversarial_review.md`).
 
+This entire accelerator — every module under `accelerator/`, the deployment
+tooling, the test suite — was built from a single, ordered sequence of
+prompts against this sample corpus. That sequence is preserved verbatim in
+[`docs/runbook/RUNBOOK.md`](docs/runbook/RUNBOOK.md): reuse it to rebuild or
+extend the accelerator from a fresh session, or to point the same process at
+a different source repo.
+
 ## Pipeline
 
 ```mermaid
@@ -198,6 +205,10 @@ docs/
                                  idempotency, promotion, rollback)
   example-run/                  Output of a full run against the bundled WWI sample, including
                                  the adversarial review and end-to-end validation report
+  runbook/
+    RUNBOOK.md                  The actual prompt sequence used to build this accelerator,
+                                 step by step — reuse it to rebuild/extend the accelerator
+                                 against a different source corpus from a fresh session
 ```
 
 ## Overriding the target architecture
