@@ -1,4 +1,4 @@
--- Source: OLTP:DataLoadSimulation.FicticiousNamePool  (/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/sql/simple_table_lift_and_shift.sql)
+-- Source: OLTP:DataLoadSimulation.FicticiousNamePool  (fixtures/sql/simple_table_lift_and_shift.sql)
 -- Converted: TABLE -> Delta table. Semantics preserved; SQL Server-specific DDL clauses
 -- (IDENTITY, system-versioning, MEMORY_OPTIMIZED, partition schemes) translated or
 -- flagged below rather than silently dropped.

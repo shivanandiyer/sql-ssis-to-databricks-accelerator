@@ -12,6 +12,7 @@ without needing the full 13,000-line package file for fast unit tests.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -20,7 +21,14 @@ import pytest
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
-FIXTURES_DIR = ROOT / "fixtures"
+# Fixture paths are kept relative to the current working directory (pytest is
+# always invoked from the repo root — see README/CI) rather than absolute.
+# classify_sql_file() embeds the path it's given verbatim into generated SQL
+# comments, so an absolute path here would bake the local checkout location
+# into golden_outputs/*.sql, making the golden-snapshot tests fail on any
+# other machine (this broke CI on first push: the golden files were
+# generated against a local Mac path that doesn't exist on GitHub runners).
+FIXTURES_DIR = Path(os.path.relpath(ROOT / "fixtures"))
 GOLDEN_DIR = ROOT / "golden_outputs"
 OUTPUTS_DIR = ROOT / "outputs"
 OUTPUT_DIR = ROOT / "output"

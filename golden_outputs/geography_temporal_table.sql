@@ -1,4 +1,4 @@
--- Source: OLTP:Application.Cities  (/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/sql/geography_temporal_table.sql)
+-- Source: OLTP:Application.Cities  (fixtures/sql/geography_temporal_table.sql)
 -- Converted: TABLE -> Delta table. Semantics preserved; SQL Server-specific DDL clauses
 -- (IDENTITY, system-versioning, MEMORY_OPTIMIZED, partition schemes) translated or
 -- flagged below rather than silently dropped.

@@ -35,7 +35,11 @@ jobs:
           cd sql-server-samples
           git sparse-checkout init --cone
           git sparse-checkout set samples/databases/wide-world-importers
-          git checkout main
+          # No explicit branch name: --no-checkout still fetches and points
+          # HEAD at the remote's default branch (master, not main, for this
+          # repo) — `git checkout` with no args checks that out directly
+          # rather than hardcoding a branch name that may not exist.
+          git checkout
 
       - name: Run the full accelerator pipeline
         run: |
