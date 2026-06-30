@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-06-30T04:39:12.124457+00:00",
+  "generated_at": "2026-06-30T04:57:52.813160+00:00",
   "failed_case_count": 1,
   "cases": [
     {
       "step": 2,
       "name": "Extract object inventory",
       "status": "PARTIAL",
-      "duration_seconds": 0.017,
+      "duration_seconds": 0.016,
       "evidence": {
         "total_objects": 431,
         "unsupported_count": 18,

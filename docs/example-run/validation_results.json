@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-30T04:39:12.122656+00:00",
-  "total_duration_seconds": 5.49,
+  "generated_at": "2026-06-30T04:57:52.810376+00:00",
+  "total_duration_seconds": 5.41,
   "steps_total": 11,
   "steps_passed": 10,
   "steps_partial": 1,
@@ -11,7 +11,7 @@
       "step": 1,
       "name": "Parse source repo",
       "status": "PASS",
-      "duration_seconds": 3.996,
+      "duration_seconds": 3.975,
       "evidence": {
         "oltp_files_parsed": 283,
         "dw_files_parsed": 71,
@@ -23,7 +23,7 @@
       "step": 2,
       "name": "Extract object inventory",
       "status": "PARTIAL",
-      "duration_seconds": 0.017,
+      "duration_seconds": 0.016,
       "evidence": {
         "total_objects": 431,
         "unsupported_count": 18,
@@ -80,7 +80,7 @@
       "step": 5,
       "name": "Produce impact analysis",
       "status": "PASS",
-      "duration_seconds": 0.314,
+      "duration_seconds": 0.31,
       "evidence": {
         "object_count": 431,
         "classification_distribution": {
@@ -120,7 +120,7 @@
       "step": 8,
       "name": "Convert SSIS packages",
       "status": "PASS",
-      "duration_seconds": 0.055,
+      "duration_seconds": 0.042,
       "evidence": {
         "workflow_tasks_generated": 81,
         "connection_managers_mapped": 2,
@@ -131,7 +131,7 @@
       "step": 9,
       "name": "Build deployment artifacts",
       "status": "PASS",
-      "duration_seconds": 0.001,
+      "duration_seconds": 0.0,
       "evidence": {
         "task_file_references_checked": 81,
         "broken_references": 0,
@@ -142,7 +142,7 @@
       "step": 10,
       "name": "Run automated tests",
       "status": "PASS",
-      "duration_seconds": 1.002,
+      "duration_seconds": 0.964,
       "evidence": {
         "pytest_exit_code": 0,
         "passed": 117,

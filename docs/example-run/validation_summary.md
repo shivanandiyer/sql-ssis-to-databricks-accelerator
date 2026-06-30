@@ -1,7 +1,7 @@
 # End-to-End Validation Summary
 
-> **Generated:** 2026-06-30 04:39 UTC  
-> **Total duration:** 5.49s  
+> **Generated:** 2026-06-30 04:57 UTC  
+> **Total duration:** 5.41s  
 > **Overall status: PARTIAL**  
 > **Steps:** 10 passed, 1 partial, 0 failed (of 11)
 
@@ -9,15 +9,15 @@
 
 ## What Passed
 
-- **Step 1 — Parse source repo** (3.996s): oltp_files_parsed=283, dw_files_parsed=71, ssis_packages_parsed=1, unreadable_files=0
+- **Step 1 — Parse source repo** (3.975s): oltp_files_parsed=283, dw_files_parsed=71, ssis_packages_parsed=1, unreadable_files=0
 - **Step 3 — Build dependency graph** (0.013s): node_count=414, edge_count=584, has_cycles=False, etl_lineage_targets=14
 - **Step 4 — Produce documentation** (0.005s): markdown_bytes=44937, json_bytes=7693, sections_with_confidence=14
-- **Step 5 — Produce impact analysis** (0.314s): object_count=431, classification_distribution=<dict len=4>
+- **Step 5 — Produce impact analysis** (0.31s): object_count=431, classification_distribution=<dict len=4>
 - **Step 6 — Recommend target architecture** (0.006s): chosen_architecture=medallion, medallion_layer_distribution={'BRONZE': 72, 'SILVER': 34, 'GOLD': 6}
 - **Step 7 — Convert SQL objects** (0.076s): objects_processed=279, needs_review_count=201, exceptions_raised=0
-- **Step 8 — Convert SSIS packages** (0.055s): workflow_tasks_generated=81, connection_managers_mapped=2, variables_mapped=4
-- **Step 9 — Build deployment artifacts** (0.001s): task_file_references_checked=81, broken_references=0, broken_reference_paths_sample=[]
-- **Step 10 — Run automated tests** (1.002s): pytest_exit_code=0, passed=117, failed=0, skipped=0
+- **Step 8 — Convert SSIS packages** (0.042s): workflow_tasks_generated=81, connection_managers_mapped=2, variables_mapped=4
+- **Step 9 — Build deployment artifacts** (0.0s): task_file_references_checked=81, broken_references=0, broken_reference_paths_sample=[]
+- **Step 10 — Run automated tests** (0.964s): pytest_exit_code=0, passed=117, failed=0, skipped=0
 - **Step 11 — Compare outputs with golden results** (0.004s): golden_cases_checked=2, mismatches=0
 
 ## What Partially Passed

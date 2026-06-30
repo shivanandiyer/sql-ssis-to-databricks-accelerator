@@ -298,11 +298,15 @@ def main() -> None:
          "wwi_dev.bronze.application__cities"),
     ]
     for fixture_rel, golden_rel, target_fqn in golden_cases:
-        fixture_path, golden_path = ROOT / fixture_rel, ROOT / golden_rel
+        golden_path = ROOT / golden_rel
         if not golden_path.exists():
             golden_mismatches.append({"fixture": fixture_rel, "reason": "golden file missing"})
             continue
-        obj = classify_sql_file(fixture_path, source_project="OLTP")
+        # Pass a path relative to ROOT (not ROOT-joined absolute) — classify_sql_file
+        # embeds this verbatim into generated SQL comments, and golden_outputs/*.sql
+        # were regenerated with relative paths so they're portable across machines
+        # (see tests/conftest.py for the same fix applied to the pytest suite).
+        obj = classify_sql_file(Path(fixture_rel), source_project="OLTP")
         obj["medallion_layer"] = "BRONZE"
         actual = convert_table(obj, target_fqn)["sql"]
         expected = golden_path.read_text(encoding="utf-8")
