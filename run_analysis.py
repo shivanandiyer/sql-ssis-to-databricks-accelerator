@@ -132,7 +132,7 @@ def main() -> None:
         oltp_objects = parse_sqlproj(oltp_dir, source_project="OLTP")
         print(f"  → {len(oltp_objects)} SQL objects parsed")
     else:
-        print(f"\n  [skip] No OLTP directory found or specified")
+        print("\n  [skip] No OLTP directory found or specified")
 
     # ── Parse DW project ──────────────────────────────────────────────────
     dw_objects: list = []
@@ -141,7 +141,7 @@ def main() -> None:
         dw_objects = parse_sqlproj(dw_dir, source_project="DW")
         print(f"  → {len(dw_objects)} SQL objects parsed")
     else:
-        print(f"\n  [skip] No DW directory found or specified")
+        print("\n  [skip] No DW directory found or specified")
 
     # ── Parse SSIS project ────────────────────────────────────────────────
     ssis_packages: list = []
@@ -151,7 +151,7 @@ def main() -> None:
         task_count = sum(len(p.get("all_tasks_flat", [])) for p in ssis_packages)
         print(f"  → {len(ssis_packages)} package(s), {task_count} tasks parsed")
     else:
-        print(f"\n  [skip] No SSIS directory found or specified")
+        print("\n  [skip] No SSIS directory found or specified")
 
     # ── Build unified inventory ───────────────────────────────────────────
     _section("Building inventory")

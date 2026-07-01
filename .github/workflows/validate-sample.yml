@@ -42,8 +42,13 @@ jobs:
           git checkout
 
       - name: Run the full accelerator pipeline
+        env:
+          WWI: ${{ github.workspace }}/../sql-server-samples/samples/databases/wide-world-importers
         run: |
-          python run_analysis.py
+          python run_analysis.py \
+            --oltp-dir "$WWI/wwi-ssdt/wwi-ssdt" \
+            --dw-dir   "$WWI/wwi-dw-ssdt/wwi-dw-ssdt" \
+            --ssis-dir "$WWI/wwi-ssis/wwi-ssis"
           python run_impact_analysis.py
           python run_target_state_design.py
           python run_conversion.py
@@ -56,7 +61,13 @@ jobs:
         # (a hard FAIL, not the PARTIAL state this project treats as
         # acceptable-by-design) — that's the actual pass/fail signal for
         # this job, not just "did the script run."
-        run: python run_validation.py
+        env:
+          WWI: ${{ github.workspace }}/../sql-server-samples/samples/databases/wide-world-importers
+        run: |
+          python run_validation.py \
+            --oltp-dir "$WWI/wwi-ssdt/wwi-ssdt" \
+            --dw-dir   "$WWI/wwi-dw-ssdt/wwi-dw-ssdt" \
+            --ssis-dir "$WWI/wwi-ssis/wwi-ssis"
 
       - name: Upload validation report
         if: always()

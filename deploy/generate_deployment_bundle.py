@@ -128,7 +128,7 @@ def main() -> None:
     out_file = resources_dir / f"{job_name}.job.yml"
     out_file.write_text(yaml_text, encoding="utf-8")
     print(f"  ✓  {out_file}  ({len(spec['tasks'])} tasks, env={args.env})")
-    print(f"\n  To deploy:")
+    print("\n  To deploy:")
     print(f"    databricks bundle validate --target {args.env}")
     print(f"    databricks bundle deploy  --target {args.env}")
 
