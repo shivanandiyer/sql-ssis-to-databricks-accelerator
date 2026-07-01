@@ -13,7 +13,6 @@ mcp/server.py for the full explanation).
 from __future__ import annotations
 
 import importlib.util
-import json
 import sys
 from pathlib import Path
 from types import ModuleType
