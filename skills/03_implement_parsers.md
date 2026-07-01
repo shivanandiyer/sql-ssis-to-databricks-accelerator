@@ -2,11 +2,13 @@
 
 Now implement the source analysis layer.
 
+Use the source directories established in step 2:
+- OLTP dir  — the transactional SQL Server database project
+- DW dir    — the data warehouse project (if configured; skip if blank)
+- SSIS dir  — the SSIS ETL project (if configured; skip if blank)
+
 Tasks:
-1. Crawl all supported source files in:
-   - wwi-ssdt
-   - wwi-dw-ssdt
-   - wwi-ssis
+1. Crawl all supported source files under the configured directories
 2. Build an inventory of:
    - schemas
    - tables
@@ -36,3 +38,6 @@ Rules:
 - Do not convert anything yet
 - Normalise findings into a canonical metadata model
 - Tag each object with source type, schema, dependency type, and conversion complexity
+- Objects from OLTP dir → tag source_project = "OLTP"
+- Objects from DW dir → tag source_project = "DW" (used downstream for Bronze vs Silver/Gold layer assignment)
+- If a directory was left blank in step 2, skip it gracefully — do not error

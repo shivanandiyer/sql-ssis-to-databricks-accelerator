@@ -71,34 +71,38 @@ one session. Start at any step that's relevant.
 
 ### Step 2 (runtime input interface)
 
-`02_runtime_input_interface.md` contains a hardcoded reference to the
-Wide World Importers sample corpus. Before pasting it into a fresh session,
-replace these three lines:
+`02_runtime_input_interface.md` opens with a config block you fill in once
+before pasting. Replace the four placeholder values with your own repo details:
 
 ```
-Use this GitHub sample as the source corpus:
-https://github.com/microsoft/sql-server-samples/.../wide-world-importers
+Repo URL or local path : <YOUR_REPO_URL_OR_PATH>
 
-Important folders:
-- wwi-ssdt     = SQL Server OLTP database project
-- wwi-dw-ssdt  = SQL Server DW project
-- wwi-ssis     = SSIS ETL project
+OLTP dir  : <YOUR_OLTP_DIR>
+DW dir    : <YOUR_DW_DIR>      ← leave blank if you have only one DB project
+SSIS dir  : <YOUR_SSIS_DIR>    ← leave blank if no SSIS packages
 ```
 
-with the equivalent for your own repo:
+**What each directory means:**
 
-```
-Use this local path as the source corpus:
-/path/to/your/sql-ssis-repo
+- **OLTP dir** — the folder containing your main transactional SQL Server
+  database project (the one with the `.sqlproj` file and `.sql` object files).
+  If you have only one database project with no separate DW, point this at it
+  and leave DW dir blank — layer assignment still works via schema/naming
+  heuristics (`Dimension.*`, `Fact.*`, `Integration.*`, etc.).
+  If you have no `.sqlproj` at all (just a folder of `.sql` files), point here
+  anyway — the parser falls back to raw `.sql` scanning automatically.
 
-Important folders:
-- YourOLTP/     = SQL Server OLTP database project (.sqlproj here)
-- YourDW/       = SQL Server DW project (.sqlproj here)
-- YourETL/      = SSIS ETL project (.dtsx files here)
-```
+- **DW dir** *(optional)* — a separate data warehouse database project alongside
+  your OLTP project. Objects found here are tagged `source_project = "DW"` and
+  mapped to Silver/Gold by default, while OLTP objects default to Bronze.
+  Leave blank if you have a single database project.
 
-Everything else in the skill sequence works unchanged — the rest of the skills
-don't refer to WWI by name.
+- **SSIS dir** *(optional)* — the folder containing `.dtsx` package files and
+  `.conmgr` connection managers. Leave blank if your ETL runs via SQL Agent
+  jobs, ADF pipelines, or anything other than SSIS.
+
+Everything else in the skill sequence works unchanged — skills 03 onwards
+refer to "the source dirs from step 2" rather than any hardcoded folder names.
 
 ### Steps 0 and 1 (overview and role)
 
@@ -212,6 +216,12 @@ empty files and directories.
 Implements `accelerator/parsers/sql_project_parser.py` and
 `accelerator/parsers/ssis_parser.py`. These are the only files that read the
 source repo — everything downstream consumes their output.
+
+References "the source directories configured in step 2" rather than any
+hardcoded folder names. Tags each object with `source_project = "OLTP"` or
+`"DW"` based on which directory it came from — this tag drives the Bronze vs
+Silver/Gold layer assignment in later steps. Missing directories (DW or SSIS
+left blank in step 2) are skipped gracefully.
 
 **Key output:** classified SQL objects (type, schema, name, dependencies,
 complexity signals) and parsed SSIS packages (tasks, connections, variables).
