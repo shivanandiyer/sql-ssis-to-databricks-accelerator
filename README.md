@@ -55,6 +55,11 @@ prompts against this sample corpus. That sequence is preserved verbatim in
 extend the accelerator from a fresh session, or to point the same process at
 a different source repo.
 
+The `skills/` directory contains the individual prompt files. See
+[`docs/SKILLS.md`](docs/SKILLS.md) for a guide on using them standalone —
+to extend a single pipeline stage, add new construct support, or rebuild
+the accelerator from scratch against your own source repo.
+
 ## Pipeline
 
 ```mermaid
