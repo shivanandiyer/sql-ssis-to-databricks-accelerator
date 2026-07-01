@@ -132,34 +132,34 @@ looking but wrong code.
 
 ```mermaid
 flowchart LR
-    A[SSDT .sqlproj\nOLTP + DW] --> P[Parsers]
-    B[SSIS .dtsx / .conmgr] --> P
-    P --> INV[Inventory +\nDependency Graph]
-    INV --> DOC[Current-State\nDocumentation]
-    INV --> IMP[Impact\nAnalysis]
-    IMP --> ARCH[Target-State\nArchitecture]
+    A["SSDT .sqlproj<br/>OLTP + DW"] --> P[Parsers]
+    B["SSIS .dtsx / .conmgr"] --> P
+    P --> INV["Inventory +<br/>Dependency Graph"]
+    INV --> DOC["Current-State<br/>Documentation"]
+    INV --> IMP["Impact<br/>Analysis"]
+    IMP --> ARCH["Target-State<br/>Architecture"]
     ARCH --> CONV[SQL Conversion]
     ARCH --> SSISCONV[SSIS Conversion]
     CONV --> BUNDLE[Deployment Bundle]
     SSISCONV --> BUNDLE
-    BUNDLE --> DEPLOY[(Databricks\nWorkspace)]
-    INV --> TEST[Test Matrix +\npytest suite]
+    BUNDLE --> DEPLOY[("Databricks<br/>Workspace")]
+    INV --> TEST["Test Matrix +<br/>pytest suite"]
 ```
 
 ## Target architecture: medallion on Unity Catalog
 
 ```mermaid
 flowchart TB
-    subgraph Bronze
-        B1[Raw OLTP landing tables]
-        B2[Integration staging tables]
+    subgraph Gold
+        G1[Fact tables]
     end
     subgraph Silver
         S1[Conformed SCD2 dimensions]
         S2[Serving pass-through views]
     end
-    subgraph Gold
-        G1[Fact tables]
+    subgraph Bronze
+        B1[Raw OLTP landing tables]
+        B2[Integration staging tables]
     end
     B1 --> S1
     B2 --> S1
