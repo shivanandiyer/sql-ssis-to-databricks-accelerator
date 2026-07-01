@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "name": "sql-ssis-databricks-accelerator",
+  "display_name": "SQL / SSIS / Synapse → Databricks Accelerator",
+  "version": "1.0.0",
+  "description": "Modernise any SQL Server, SSIS, or Azure Synapse codebase to Databricks. Parses, analyses, converts, and deploys. Works against any source repository.",
+  "author": {
+    "name": "Shivanand Iyer",
+    "github": "shivanandiyer"
+  },
+  "license": "MIT",
+  "server": {
+    "type": "python",
+    "entry_point": "mcp/server.py",
+    "python_version": ">=3.11"
+  },
+  "tools": [
+    { "name": "parse_source",      "description": "Parse any source repo and extract all SQL/SSIS objects" },
+    { "name": "analyse_inventory", "description": "Impact analysis and architecture recommendation" },
+    { "name": "convert_sql",       "description": "Convert SQL Server / Synapse objects to Databricks" },
+    { "name": "convert_ssis",      "description": "Convert SSIS packages to Databricks Workflows and PySpark" },
+    { "name": "generate_bundle",   "description": "Generate a Databricks Asset Bundle for deployment" },
+    { "name": "run_validation",    "description": "End-to-end validation of all conversion outputs" }
+  ],
+  "resources": [
+    { "uri": "accelerator://skills", "description": "List of available skill prompt files" }
+  ],
+  "prompts": [
+    { "name": "run_full_pipeline", "description": "Ready-to-use prompt to run the full pipeline" }
+  ],
+  "installation": {
+    "pip": "pip install -r requirements.txt",
+    "mcpb": "mcpb install shivanandiyer/sql-ssis-databricks-accelerator"
+  },
+  "repository": "https://github.com/shivanandiyer/sql-ssis-databricks-accelerator",
+  "tags": ["databricks", "ssis", "sql-server", "synapse", "migration", "modernisation", "mcp"]
+}

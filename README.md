@@ -190,6 +190,12 @@ run_ssis_conversion.py         Step 8: SSIS conversion
 run_test_matrix.py             Test matrix generation
 run_validation.py              Full end-to-end validation against the real source repo
 
+mcp/
+  server.py                    MCP server exposing the accelerator as tools/resources/prompts
+                                for AI agents (stdio transport) — see mcp/README.md
+skills/                        One markdown prompt file per pipeline step — paste directly
+                                into a fresh Claude Code session (see docs/runbook/RUNBOOK.md)
+
 tests/                         pytest suite (parsers, metadata extraction, dependency graph,
                                 SQL conversion, SSIS mapping, architecture recommendation,
                                 deployment bundle, regression tests for known edge cases)

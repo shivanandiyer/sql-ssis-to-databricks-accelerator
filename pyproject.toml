@@ -43,6 +43,11 @@ dev = [
 deploy = [
     "databricks-sql-connector>=3.0",
 ]
+# Only needed to run mcp/server.py (the MCP server exposing accelerator tools
+# to AI agents) — the accelerator pipeline itself never imports this.
+mcp = [
+    "mcp>=1.2.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/<org>/sql-ssis-to-databricks-accelerator"
