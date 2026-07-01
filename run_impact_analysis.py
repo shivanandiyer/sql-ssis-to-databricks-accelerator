@@ -2,45 +2,66 @@
 run_impact_analysis.py
 Entry point for the impact-analysis step.
 
-Loads outputs/inventory.json and outputs/dependencies.json (already produced by
-run_analysis.py) and produces:
-    outputs/impact_analysis.md
-    outputs/migration_risk_register.csv
-    outputs/object_complexity_scores.json
-    outputs/manual_intervention_list.md
+Reads:
+    <input-path>/inventory.json
+    <input-path>/dependencies.json
+
+Produces:
+    <input-path>/impact_analysis.md
+    <input-path>/migration_risk_register.csv
+    <input-path>/object_complexity_scores.json
+    <input-path>/manual_intervention_list.md
 
 Usage:
-    python run_impact_analysis.py
+    python run_impact_analysis.py --input-path ./outputs
 """
 
 from __future__ import annotations
 
+import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
 from accelerator.analyzers.impact_analysis import run_impact_analysis
 
-OUTPUT_DIR = Path(__file__).parent / "outputs"
+
+def _parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Run impact analysis on a parsed inventory.",
+    )
+    p.add_argument("--input-path", metavar="DIR", default="./outputs",
+                   help="Directory containing inventory.json and dependencies.json "
+                        "(produced by run_analysis.py). Default: ./outputs")
+    return p.parse_args()
 
 
 def main() -> None:
-    t0 = time.time()
+    args = _parse_args()
+    output_dir = Path(args.input_path)
 
-    inventory = json.loads((OUTPUT_DIR / "inventory.json").read_text(encoding="utf-8"))
-    graph = json.loads((OUTPUT_DIR / "dependencies.json").read_text(encoding="utf-8"))
+    if not (output_dir / "inventory.json").exists():
+        print(f"error: inventory.json not found in {output_dir}. "
+              "Run run_analysis.py first.", file=sys.stderr)
+        sys.exit(1)
+
+    t0 = time.time()
+    inventory = json.loads((output_dir / "inventory.json").read_text(encoding="utf-8"))
+    graph     = json.loads((output_dir / "dependencies.json").read_text(encoding="utf-8"))
 
     print("=" * 60)
     print("  Running impact analysis")
     print("=" * 60)
-    paths = run_impact_analysis(inventory, graph, OUTPUT_DIR)
+    paths = run_impact_analysis(inventory, graph, output_dir)
 
     for key, path in paths.items():
         size = path.stat().st_size if path.exists() else 0
-        print(f"  {'✓' if path.exists() else '✗'}  {path.name:<35} {size:>8,} bytes")
+        print(f"  {'✓' if path.exists() else '✗'}  {path.name:<40} {size:>8,} bytes")
 
     elapsed = time.time() - t0
     print(f"\n  Completed in {elapsed:.1f}s")
+    print(f"  Next step: python run_target_state_design.py --input-path {output_dir}")
 
 
 if __name__ == "__main__":

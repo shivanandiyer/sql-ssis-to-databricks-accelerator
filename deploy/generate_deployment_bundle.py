@@ -1,25 +1,26 @@
 """
 generate_deployment_bundle.py
-Generates the Databricks Asset Bundle job resource definition from the real,
-already-converted workflow_spec.json — never hand-transcribed, so the bundle
-always reflects exactly what the SSIS conversion layer produced (81 tasks
-today; re-run this after any change to run_ssis_conversion.py's output).
-
-Writes:
-    bundle/resources/wwi_daily_etl_main.job.yml
+Generates the Databricks Asset Bundle job resource YAML from the
+workflow_spec.json produced by run_ssis_conversion.py.
 
 Usage:
-    python deploy/generate_deployment_bundle.py
+    python deploy/generate_deployment_bundle.py \\
+        --input-path ./output \\
+        --output-path ./bundle \\
+        --env dev
 """
 
 from __future__ import annotations
 
+import argparse
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
+# Legacy defaults kept so the file can still be imported by mcp/tools/generate_bundle.py
 WORKFLOW_SPEC = ROOT / "output" / "workflow_spec.json"
-RESOURCE_OUT = ROOT / "bundle" / "resources" / "wwi_daily_etl_main.job.yml"
+RESOURCE_OUT  = ROOT / "bundle" / "resources" / "wwi_daily_etl_main.job.yml"
 
 
 def render_job_yaml(spec: dict) -> str:
@@ -89,12 +90,47 @@ def render_job_yaml(spec: dict) -> str:
     return "\n".join(lines)
 
 
+def _parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Generate a Databricks Asset Bundle job resource YAML from workflow_spec.json.",
+    )
+    p.add_argument("--input-path", metavar="DIR", default="./output",
+                   help="Directory containing workflow_spec.json (default: ./output).")
+    p.add_argument("--output-path", metavar="DIR", default="./bundle",
+                   help="Directory to write the bundle resources into (default: ./bundle).")
+    p.add_argument("--env", metavar="NAME", default="dev",
+                   choices=["dev", "test", "prod"],
+                   help="Target environment — substituted into catalog name (default: dev).")
+    return p.parse_args()
+
+
+_ENV_CATALOG = {"dev": "wwi_dev", "test": "wwi_test", "prod": "wwi_prod"}
+
+
 def main() -> None:
-    spec = json.loads(WORKFLOW_SPEC.read_text(encoding="utf-8"))
+    args = _parse_args()
+    input_dir  = Path(args.input_path)
+    output_dir = Path(args.output_path)
+
+    workflow_spec_path = input_dir / "workflow_spec.json"
+    if not workflow_spec_path.exists():
+        print(f"error: workflow_spec.json not found in {input_dir}. "
+              "Run run_ssis_conversion.py first.", file=sys.stderr)
+        sys.exit(1)
+
+    spec      = json.loads(workflow_spec_path.read_text(encoding="utf-8"))
     yaml_text = render_job_yaml(spec)
-    RESOURCE_OUT.parent.mkdir(parents=True, exist_ok=True)
-    RESOURCE_OUT.write_text(yaml_text, encoding="utf-8")
-    print(f"Wrote {RESOURCE_OUT.relative_to(ROOT)} ({len(spec['tasks'])} tasks)")
+    yaml_text = yaml_text.replace("${var.catalog}", _ENV_CATALOG[args.env])
+
+    resources_dir = output_dir / "resources"
+    resources_dir.mkdir(parents=True, exist_ok=True)
+    job_name = spec.get("name", "job")
+    out_file = resources_dir / f"{job_name}.job.yml"
+    out_file.write_text(yaml_text, encoding="utf-8")
+    print(f"  ✓  {out_file}  ({len(spec['tasks'])} tasks, env={args.env})")
+    print(f"\n  To deploy:")
+    print(f"    databricks bundle validate --target {args.env}")
+    print(f"    databricks bundle deploy  --target {args.env}")
 
 
 if __name__ == "__main__":

@@ -1,23 +1,35 @@
 """
 run_validation.py
-End-to-end validation of the WWI Modernisation Accelerator against the real
-Wide World Importers sample repository.
-
-Runs all 12 validation steps fresh (re-parsing the source repo, not reusing
-any previously cached outputs), records pass/partial/fail status with
-evidence for each step, runs the pytest suite, diffs golden snapshots, and
-produces (under docs/example-run/):
+End-to-end validation of the modernisation accelerator against a real source
+repository. Runs all 12 validation steps fresh (re-parsing the source repo,
+not reusing any previously cached outputs), records pass/partial/fail status
+with evidence for each step, runs the pytest suite, diffs golden snapshots,
+and produces (under docs/example-run/):
     validation_summary.md
     validation_results.json
     failed_cases.json
     recommended_backlog.md
 
 Usage:
-    python run_validation.py
+    # Against any source repo (auto-detect OLTP/DW/SSIS dirs):
+    python run_validation.py --source-path /path/to/your/repo
+
+    # Explicit dirs:
+    python run_validation.py \\
+        --oltp-dir /path/to/repo/OLTP \\
+        --dw-dir   /path/to/repo/DW   \\
+        --ssis-dir /path/to/repo/SSIS
+
+    # Custom output paths:
+    python run_validation.py \\
+        --source-path /path/to/repo \\
+        --analysis-path ./my-outputs \\
+        --conversion-path ./my-output
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import subprocess
@@ -28,8 +40,6 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).parent
-OUTPUTS_DIR = ROOT / "outputs"
-OUTPUT_DIR = ROOT / "output"
 EXAMPLE_RUN_DIR = ROOT / "docs" / "example-run"
 
 sys.path.insert(0, str(ROOT))
@@ -44,15 +54,54 @@ from accelerator.docs.target_state_design import generate_target_state_design
 from accelerator.converters.sql_converter import convert_table, convert_view, convert_function, convert_procedure
 from accelerator.converters.ssis_converter import convert_ssis_package
 
-_BASE = ROOT.parent
-REPO_ROOT = _BASE / "sql-server-samples" / "samples" / "databases" / "wide-world-importers"
-OLTP_DIR = REPO_ROOT / "wwi-ssdt" / "wwi-ssdt"
-DW_DIR = REPO_ROOT / "wwi-dw-ssdt" / "wwi-dw-ssdt"
-SSIS_DIR = REPO_ROOT / "wwi-ssis" / "wwi-ssis"
+
+def _detect_dirs(source_path: Path) -> tuple[Path | None, Path | None, Path | None]:
+    sqlproj_dirs = sorted({p.parent for p in source_path.rglob("*.sqlproj")})
+    dtsx_dirs    = sorted({p.parent for p in source_path.rglob("*.dtsx")})
+    dw_candidates = [d for d in sqlproj_dirs if "dw" in d.name.lower()]
+    dw_dir        = dw_candidates[0] if dw_candidates else None
+    non_dw        = [d for d in sqlproj_dirs if d != dw_dir]
+    oltp_dir      = non_dw[0] if non_dw else None
+    ssis_dir      = dtsx_dirs[0] if dtsx_dirs else None
+    return oltp_dir, dw_dir, ssis_dir
+
+
+def _parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="End-to-end validation of the modernisation accelerator against a real source repo.",
+    )
+    src = p.add_argument_group("source (auto-detect or explicit)")
+    src.add_argument("--source-path", metavar="DIR",
+                     help="Root of the source repository. Auto-detects OLTP/DW/SSIS sub-dirs.")
+    src.add_argument("--oltp-dir",  metavar="DIR", help="Explicit OLTP .sqlproj directory.")
+    src.add_argument("--dw-dir",    metavar="DIR", help="Explicit DW .sqlproj directory.")
+    src.add_argument("--ssis-dir",  metavar="DIR", help="Explicit SSIS .dtsx directory.")
+
+    out = p.add_argument_group("output paths")
+    out.add_argument("--analysis-path",   metavar="DIR", default="./outputs",
+                     help="Where to write analysis outputs (default: ./outputs).")
+    out.add_argument("--conversion-path", metavar="DIR", default="./output",
+                     help="Where to write converted assets (default: ./output).")
+    return p.parse_args()
+
+
+def _resolve_source_dirs(args: argparse.Namespace) -> tuple[Path | None, Path | None, Path | None]:
+    oltp_dir = Path(args.oltp_dir) if args.oltp_dir else None
+    dw_dir   = Path(args.dw_dir)   if args.dw_dir   else None
+    ssis_dir = Path(args.ssis_dir) if args.ssis_dir else None
+
+    if args.source_path:
+        source_path = Path(args.source_path)
+        auto_oltp, auto_dw, auto_ssis = _detect_dirs(source_path)
+        oltp_dir = oltp_dir or auto_oltp
+        dw_dir   = dw_dir   or auto_dw
+        ssis_dir = ssis_dir or auto_ssis
+
+    return oltp_dir, dw_dir, ssis_dir
 
 CONVERTIBLE_TYPES = {"TABLE", "VIEW", "PROCEDURE", "SCALAR_FUNCTION", "TVF_INLINE", "TVF_MULTI"}
 
-results: list[dict[str, Any]] = []
+results:      list[dict[str, Any]] = []
 failed_cases: list[dict[str, Any]] = []
 
 
@@ -79,16 +128,35 @@ def record(step_no: int, name: str, status: str, duration: float, evidence: dict
 
 
 def main() -> None:
+    args = _parse_args()
+    OUTPUTS_DIR = Path(args.analysis_path)
+    OUTPUT_DIR  = Path(args.conversion_path)
+
+    oltp_dir, dw_dir, ssis_dir = _resolve_source_dirs(args)
+    if not oltp_dir and not dw_dir and not ssis_dir:
+        print("error: provide --source-path for auto-detection, or at least one of "
+              "--oltp-dir / --dw-dir / --ssis-dir", file=sys.stderr)
+        sys.exit(1)
+
     print("=" * 70)
-    print("  WWI MODERNISATION ACCELERATOR — END-TO-END VALIDATION")
+    print("  MODERNISATION ACCELERATOR — END-TO-END VALIDATION")
     print("=" * 70)
+    if oltp_dir:
+        print(f"  OLTP dir  : {oltp_dir}")
+    if dw_dir:
+        print(f"  DW dir    : {dw_dir}")
+    if ssis_dir:
+        print(f"  SSIS dir  : {ssis_dir}")
+    print(f"  Analysis  : {OUTPUTS_DIR.resolve()}")
+    print(f"  Conversion: {OUTPUT_DIR.resolve()}")
+    print()
     t_start = time.time()
 
     # ── Step 1: Parse source repo ────────────────────────────────────────
     t0 = time.time()
-    oltp_objects = parse_sqlproj(OLTP_DIR, source_project="OLTP")
-    dw_objects = parse_sqlproj(DW_DIR, source_project="DW")
-    ssis_packages = parse_ssis(SSIS_DIR)
+    oltp_objects   = parse_sqlproj(oltp_dir, source_project="OLTP") if oltp_dir else []
+    dw_objects     = parse_sqlproj(dw_dir,   source_project="DW")   if dw_dir   else []
+    ssis_packages  = parse_ssis(ssis_dir)                            if ssis_dir else []
     all_sql = oltp_objects + dw_objects
     parse_errors = [o for o in all_sql if o.get("object_type") in ("UNREADABLE",)]
     status = "PASS" if not parse_errors and oltp_objects and dw_objects and ssis_packages else "PARTIAL"

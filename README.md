@@ -127,15 +127,38 @@ or generate your own — see Quickstart).
 
 ## Quickstart
 
+### Against your own repo (one command)
+
 ```bash
 # 1. Clone this repository
-git clone https://github.com/<org>/sql-ssis-to-databricks-accelerator.git
+git clone https://github.com/shivanandiyer/sql-ssis-to-databricks-accelerator
 cd sql-ssis-to-databricks-accelerator
 
-# 2. Install test dependencies (the pipeline itself needs nothing extra)
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Clone the sample source corpus (sparse checkout — just the WWI sample)
+# 3. Run the full pipeline against any SQL Server / SSIS / Synapse source repo
+python accelerator/cli.py --source-path /path/to/your/sql-ssis-repo
+```
+
+The accelerator auto-detects your OLTP/DW/SSIS project directories.
+If auto-detection doesn't match your folder layout, pass explicit paths:
+
+```bash
+python accelerator/cli.py \
+    --oltp-dir  /path/to/repo/OLTP_Project \
+    --dw-dir    /path/to/repo/DataWarehouse \
+    --ssis-dir  /path/to/repo/ETL_Packages
+```
+
+See [`docs/USAGE.md`](docs/USAGE.md) for the full guide: skip flags,
+custom output directories, architecture overrides, and what to do with
+the `review_required/` items.
+
+### Against the Wide World Importers sample corpus
+
+```bash
+# Clone the sample source corpus (sparse checkout)
 git clone --no-checkout https://github.com/microsoft/sql-server-samples.git ../sql-server-samples
 cd ../sql-server-samples
 git sparse-checkout init --cone
@@ -143,25 +166,25 @@ git sparse-checkout set samples/databases/wide-world-importers
 git checkout main
 cd ../sql-ssis-to-databricks-accelerator
 
-# 4. Run the pipeline end-to-end
-python run_analysis.py              # parse -> inventory -> dependency graph -> docs
-python run_impact_analysis.py       # 12-dimension risk scoring + classification
-python run_target_state_design.py   # medallion architecture + Unity Catalog design
-python run_conversion.py            # convert SQL objects
-python run_ssis_conversion.py       # convert the SSIS package
-python run_test_matrix.py           # generate the test matrix
+# Run the full pipeline
+python accelerator/cli.py \
+    --oltp-dir ../sql-server-samples/samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt \
+    --dw-dir   ../sql-server-samples/samples/databases/wide-world-importers/wwi-dw-ssdt/wwi-dw-ssdt \
+    --ssis-dir ../sql-server-samples/samples/databases/wide-world-importers/wwi-ssis/wwi-ssis
 
-# 5. Run the test suite
+# Run the test suite
 pytest tests/
 
-# 6. Run the full end-to-end validation (re-parses from scratch, runs
-#    pytest, diffs golden snapshots, produces a pass/partial/fail report)
-python run_validation.py
+# Full end-to-end validation (re-parses, runs pytest, diffs golden snapshots)
+python run_validation.py \
+    --oltp-dir ../sql-server-samples/samples/databases/wide-world-importers/wwi-ssdt/wwi-ssdt \
+    --dw-dir   ../sql-server-samples/samples/databases/wide-world-importers/wwi-dw-ssdt/wwi-dw-ssdt \
+    --ssis-dir ../sql-server-samples/samples/databases/wide-world-importers/wwi-ssis/wwi-ssis
 ```
 
 Generated analysis artifacts land in `outputs/`; converted code and the
 SSIS Workflow spec land in `output/` (both gitignored — regenerate any time
-by re-running the scripts above).
+by re-running the pipeline).
 
 ## Project structure
 
@@ -237,7 +260,9 @@ generate_target_state_design(
 Or from the command line:
 
 ```bash
-python run_target_state_design.py data_vault
+python run_target_state_design.py --input-path ./outputs --architecture data_vault
+# or via the single-command entry point:
+python accelerator/cli.py --source-path /path/to/repo --architecture lakehouse
 ```
 
 The override is always recorded in `target_state_mappings.json`'s
