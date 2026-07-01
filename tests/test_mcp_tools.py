@@ -32,7 +32,7 @@ if str(MCP_TOOLS) not in sys.path:
 
 def run(coro):
     """Run an async handler synchronously."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 def _tiny_inventory(tmp: Path) -> Path:
