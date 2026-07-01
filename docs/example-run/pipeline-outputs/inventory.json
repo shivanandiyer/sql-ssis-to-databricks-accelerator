@@ -1,0 +1,660 @@
+{
+  "version": "0.1.0",
+  "total_objects": 14,
+  "unsupported_count": 0,
+  "summary": {
+    "by_type": {
+      "PROCEDURE": 2,
+      "SCALAR_FUNCTION": 1,
+      "SSIS_DATA_FLOW": 1,
+      "SSIS_EXECUTE_SQL": 4,
+      "SSIS_EXPRESSION": 1,
+      "SSIS_PACKAGE": 1,
+      "SSIS_SEQUENCE_CONTAINER": 1,
+      "TABLE": 2,
+      "VIEW": 1
+    },
+    "by_project": {
+      "OLTP": 6,
+      "SSIS": 8
+    },
+    "by_layer": {
+      "BRONZE": 12,
+      "SILVER": 2
+    },
+    "by_risk": {
+      "HIGH": 1,
+      "LOW": 9,
+      "MEDIUM": 1,
+      "NONE": 3
+    },
+    "by_complexity": {
+      "HIGH": 2,
+      "LOW": 12
+    },
+    "avg_conversion_confidence": 0.704
+  },
+  "objects": [
+    {
+      "id": "OLTP:Integration.GetCityUpdates",
+      "name": "GetCityUpdates",
+      "schema": "Integration",
+      "object_type": "PROCEDURE",
+      "source_project": "OLTP",
+      "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/sql/cursor_procedure.sql",
+      "raw_ddl": "\nCREATE PROCEDURE Integration.GetCityUpdates\n@LastCutoff datetime2(7),\n@NewCutoff datetime2(7)\nWITH EXECUTE AS OWNER\nAS\nBEGIN\n    SET NOCOUNT ON;\n    SET XACT_ABORT ON;\n\n    DECLARE @EndOfTime datetime2(7) = '99991231 23:59:59.9999999';\n    DECLARE @InitialLoadDate date = '20200101';\n\n    CREATE TABLE #CityChanges\n    (\n        [WWI City ID] int,\n        City nvarchar(50),\n        [State Province] nvarchar(50),\n        Country nvarchar(50),\n        Continent nvarchar(30),\n        [Sales Territory] nvarchar(50),\n        Region nvarchar(30),\n        Subregion nvarchar(30),\n        [Location] geography,\n        [Latest Recorded Population] bigint,\n        [Valid From] datetime2(7),\n        [Valid To] datetime2(7) NULL\n    );\n\n    DECLARE @CountryID int;\n    DECLARE @StateProvinceID int;\n    DECLARE @CityID int;\n    DECLARE @ValidFrom datetime2(7);\n\n    -- first need to find any country changes that have occurred since initial load\n\n    DECLARE CountryChangeList CURSOR FAST_FORWARD READ_ONLY\n    FOR\n    SELECT co.CountryID,\n           co.ValidFrom\n    FROM [Application].Countries_Archive AS co\n    WHERE co.ValidFrom > @LastCutoff\n    AND co.ValidFrom <= @NewCutoff\n    AND co.ValidFrom <> @InitialLoadDate\n    UNION ALL\n    SELECT co.CountryID,\n           co.ValidFrom\n    FROM [Application].Countries AS co\n    WHERE co.ValidFrom > @LastCutoff\n    AND co.ValidFrom <= @NewCutoff\n    AND co.ValidFrom <> @InitialLoadDate\n    ORDER BY ValidFrom;\n\n    OPEN CountryChangeList;\n    FETCH NEXT FROM CountryChangeList INTO @CountryID, @ValidFrom;\n\n    WHILE @@FETCH_STATUS = 0\n    BEGIN\n        INSERT #CityChanges\n            ([WWI City ID], City, [State Province], Country, Continent, [Sales Territory], Region, Subregion,\n             [Location], [Latest Recorded Population], [Valid From], [Valid To])\n        SELECT c.CityID, c.CityName, sp.StateProvinceName, co.CountryName, co.Continent, sp.SalesTerritory, co.Region, co.Subregion,\n               c.[Location], COALESCE(c.LatestRecordedPopulation, 0), @ValidFrom, NULL\n        FROM [Application].Cities FOR SYSTEM_TIME AS OF @ValidFrom AS c\n        INNER JOIN [Application].StateProvinces FOR SYSTEM_TIME AS OF @ValidFrom AS sp\n        ON c.StateProvinceID = sp.StateProvinceID\n        INNER JOIN [Application].Countries FOR SYSTEM_TIME AS OF @ValidFrom AS co\n        ON sp.CountryID = co.CountryID\n        WHERE co.CountryID = @CountryID;\n\n        FETCH NEXT FROM CountryChangeList INTO @CountryID, @ValidFrom;\n    END;\n\n    CLOSE CountryChangeList;\n    DEALLOCATE CountryChangeList;\n\n    -- next need to find any stateprovince changes that have occurred since initial load\n\n    DECLARE StateProvinceChangeList CURSOR FAST_FORWARD READ_ONLY\n    FOR\n    SELECT sp.StateProvinceID,\n           sp.ValidFrom\n    FROM [Application].StateProvinces_Archive AS sp\n    WHERE sp.ValidFrom > @LastCutoff\n    AND sp.ValidFrom <= @NewCutoff\n    AND sp.ValidFrom <> @InitialLoadDate\n    UNION ALL\n    SELECT sp.StateProvinceID,\n           sp.ValidFrom\n    FROM [Application].StateProvinces AS sp\n    WHERE sp.ValidFrom > @LastCutoff\n    AND sp.ValidFrom <= @NewCutoff\n    AND sp.ValidFrom <> @InitialLoadDate\n    ORDER BY ValidFrom;\n\n    OPEN StateProvinceChangeList;\n    FETCH NEXT FROM StateProvinceChangeList INTO @StateProvinceID, @ValidFrom;\n\n    WHILE @@FETCH_STATUS = 0\n    BEGIN\n        INSERT #CityChanges\n            ([WWI City ID], City, [State Province], Country, Continent, [Sales Territory], Region, Subregion,\n             [Location], [Latest Recorded Population], [Valid From], [Valid To])\n        SELECT c.CityID, c.CityName, sp.StateProvinceName, co.CountryName, co.Continent, sp.SalesTerritory, co.Region, co.Subregion,\n               c.[Location], COALESCE(c.LatestRecordedPopulation, 0), @ValidFrom, NULL\n        FROM [Application].Cities FOR SYSTEM_TIME AS OF @ValidFrom AS c\n        INNER JOIN [Application].StateProvinces FOR SYSTEM_TIME AS OF @ValidFrom AS sp\n        ON c.StateProvinceID = sp.StateProvinceID\n        INNER JOIN [Application].Countries FOR SYSTEM_TIME AS OF @ValidFrom AS co\n        ON sp.CountryID = co.CountryID\n        WHERE sp.StateProvinceID = @StateProvinceID;\n\n        FETCH NEXT FROM StateProvinceChangeList INTO @StateProvinceID, @ValidFrom;\n    END;\n\n    CLOSE StateProvinceChangeList;\n    DEALLOCATE StateProvinceChangeList;\n\n    -- finally need to find any city changes that have occurred, including during the initial load\n\n    DECLARE CityChangeList CURSOR FAST_FORWARD READ_ONLY\n    FOR\n    SELECT c.CityID,\n           c.ValidFrom\n    FROM [Application].Cities_Archive AS c\n    WHERE c.ValidFrom > @LastCutoff\n    AND c.ValidFrom <= @NewCutoff\n    UNION ALL\n    SELECT c.CityID,\n           c.ValidFrom\n    FROM [Application].Cities AS c\n    WHERE c.ValidFrom > @LastCutoff\n    AND c.ValidFrom <= @NewCutoff\n    ORDER BY ValidFrom;\n\n    OPEN CityChangeList;\n    FETCH NEXT FROM CityChangeList INTO @CityID, @ValidFrom;\n\n    WHILE @@FETCH_STATUS = 0\n    BEGIN\n        INSERT #CityChanges\n            ([WWI City ID], City, [State Province], Country, Continent, [Sales Territory], Region, Subregion,\n             [Location], [Latest Recorded Population], [Valid From], [Valid To])\n        SELECT c.CityID, c.CityName, sp.StateProvinceName, co.CountryName, co.Continent, sp.SalesTerritory, co.Region, co.Subregion,\n               c.[Location], COALESCE(c.LatestRecordedPopulation, 0), @ValidFrom, NULL\n        FROM [Application].Cities FOR SYSTEM_TIME AS OF @ValidFrom AS c\n        INNER JOIN [Application].StateProvinces FOR SYSTEM_TIME AS OF @ValidFrom AS sp\n        ON c.StateProvinceID = sp.StateProvinceID\n        INNER JOIN [Application].Countries FOR SYSTEM_TIME AS OF @ValidFrom AS co\n        ON sp.CountryID = co.CountryID\n        WHERE c.CityID = @CityID;\n\n        FETCH NEXT FROM CityChangeList INTO @CityID, @ValidFrom;\n    END;\n\n    CLOSE CityChangeList;\n    DEALLOCATE CityChangeList;\n\n    -- add an index to make lookups faster\n\n    CREATE INDEX IX_CityChanges ON #CityChanges ([WWI City ID], [Valid From]);\n\n    -- work out the [Valid To] value by taking the [Valid From] of any row that's for the same city but later\n    -- otherwise take the end of time\n\n    UPDATE cc\n    SET [Valid To] = COALESCE((SELECT MIN([Valid From]) FROM #CityChanges AS cc2\n                                                        WHERE cc2.[WWI City ID] = cc.[WWI City ID]\n                                                        AND cc2.[Valid From] > cc.[Valid From]), @EndOfTime)\n    FROM #CityChanges AS cc;\n\n    SELECT [WWI City ID], City, [State Province], Country, Continent, [Sales Territory],\n           Region, Subregion, [Location] geography, [Latest Recorded Population], [Valid From],\n           [Valid To]\n    FROM #CityChanges\n    ORDER BY [Valid From];\n\n    DROP TABLE #CityChanges;\n\n    RETURN 0;\nEND;\n",
+      "references": {
+        "tables": [
+          "Application.Countries_Archive",
+          "Application.Countries",
+          "Application.Cities",
+          "Application.StateProvinces",
+          "Application.StateProvinces_Archive",
+          "Application.Cities_Archive"
+        ],
+        "procedures": [],
+        "functions": []
+      },
+      "table_features": [],
+      "etl_semantics": [
+        "INCREMENTAL",
+        "SCD2"
+      ],
+      "complexity_band": "HIGH",
+      "complexity_score": 10,
+      "complexity_factors": [
+        "CURSOR(+5)",
+        "FOR\\s+SYSTEM_TIME(+3)",
+        "#\\w+(+1)",
+        "WHILE(+1)"
+      ],
+      "columns": [],
+      "folder_type": null,
+      "folder_path": "Claude/wwi-modernisation-accelerator/fixtures/sql",
+      "medallion_layer": "BRONZE",
+      "layer_subcategory": null,
+      "risk": "HIGH",
+      "conversion_confidence": 0.4,
+      "is_unsupported": false,
+      "manual_steps": [
+        "CURSOR-based row-by-row logic must be rewritten as set-based PySpark operations"
+      ]
+    },
+    {
+      "id": "OLTP:WebApi.Cities",
+      "name": "Cities",
+      "schema": "WebApi",
+      "object_type": "VIEW",
+      "source_project": "OLTP",
+      "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/sql/forjson_view.sql",
+      "raw_ddl": "CREATE VIEW [WebApi].[Cities]\nAS\nSELECT c.CityID, c.CityName, c.LatestRecordedPopulation, c.StateProvinceID, sp.StateProvinceName,\n\tLocation = JSON_QUERY((SELECT\n\t\t\t\ttype = 'Feature',\n\t\t\t\t[geometry.type] = 'Point',\n\t\t\t\t[geometry.coordinates] = JSON_QUERY(CONCAT('[',c.Location.Long,',',c.Location.Lat ,']'))\n\t\t\tFOR JSON PATH, WITHOUT_ARRAY_WRAPPER))\nFROM Application.Cities c\n\tINNER JOIN Application.StateProvinces sp\n\t\tON c.StateProvinceID = sp.StateProvinceID",
+      "references": {
+        "tables": [
+          "Application.Cities",
+          "Application.StateProvinces"
+        ],
+        "procedures": [],
+        "functions": []
+      },
+      "table_features": [],
+      "etl_semantics": [],
+      "complexity_band": "LOW",
+      "complexity_score": 3,
+      "complexity_factors": [
+        "FOR\\s+XML(+3)"
+      ],
+      "columns": [],
+      "folder_type": null,
+      "folder_path": "Claude/wwi-modernisation-accelerator/fixtures/sql",
+      "medallion_layer": "SILVER",
+      "layer_subcategory": "serving_passthrough",
+      "risk": "LOW",
+      "conversion_confidence": 0.9,
+      "is_unsupported": false,
+      "manual_steps": []
+    },
+    {
+      "id": "OLTP:Application.Cities",
+      "name": "Cities",
+      "schema": "Application",
+      "object_type": "TABLE",
+      "source_project": "OLTP",
+      "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/sql/geography_temporal_table.sql",
+      "raw_ddl": "CREATE TABLE [Application].[Cities] (\n    [CityID]                   INT                                         CONSTRAINT [DF_Application_Cities_CityID] DEFAULT (NEXT VALUE FOR [Sequences].[CityID]) NOT NULL,\n    [CityName]                 NVARCHAR (50)                               NOT NULL,\n    [StateProvinceID]          INT                                         NOT NULL,\n    [Location]                 [sys].[geography]                           NULL,\n    [LatestRecordedPopulation] BIGINT                                      NULL,\n    [LastEditedBy]             INT                                         NOT NULL,\n    [ValidFrom]                DATETIME2 (7) GENERATED ALWAYS AS ROW START NOT NULL,\n    [ValidTo]                  DATETIME2 (7) GENERATED ALWAYS AS ROW END   NOT NULL,\n    CONSTRAINT [PK_Application_Cities] PRIMARY KEY CLUSTERED ([CityID] ASC),\n    CONSTRAINT [FK_Application_Cities_Application_People] FOREIGN KEY ([LastEditedBy]) REFERENCES [Application].[People] ([PersonID]),\n    CONSTRAINT [FK_Application_Cities_StateProvinceID_Application_StateProvinces] FOREIGN KEY ([StateProvinceID]) REFERENCES [Application].[StateProvinces] ([StateProvinceID]),\n    PERIOD FOR SYSTEM_TIME ([ValidFrom], [ValidTo])\n)\nWITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE=[Application].[Cities_Archive], DATA_CONSISTENCY_CHECK=ON));\n\n\nGO\nCREATE NONCLUSTERED INDEX [FK_Application_Cities_StateProvinceID]\n    ON [Application].[Cities]([StateProvinceID] ASC);\n\n\nGO\nEXECUTE sp_addextendedproperty @name = N'Description', @value = 'Auto-created to support a foreign key', @level0type = N'SCHEMA', @level0name = N'Application', @level1type = N'TABLE', @level1name = N'Cities', @level2type = N'INDEX', @level2name = N'FK_Application_Cities_StateProvinceID';\n\n\nGO\nEXECUTE sp_addextendedproperty @name = N'Description', @value = N'Cities that are part of any address (including geographic location)', @level0type = N'SCHEMA', @level0name = N'Application', @level1type = N'TABLE', @level1name = N'Cities';\n\n\nGO\nEXECUTE sp_addextendedproperty @name = N'Description', @value = 'Numeric ID used for reference to a city within the database', @level0type = N'SCHEMA', @level0name = N'Application', @level1type = N'TABLE', @level1name = N'Cities', @level2type = N'COLUMN', @level2name = N'CityID';\n\n\nGO\nEXECUTE sp_addextendedproperty @name = N'Description', @value = 'Formal name of the city', @level0type = N'SCHEMA', @level0name = N'Application', @level1type = N'TABLE', @level1name = N'Cities', @level2type = N'COLUMN', @level2name = N'CityName';\n\n\nGO\nEXECUTE sp_addextendedproperty @name = N'Description', @value = 'State or province for this city', @level0type = N'SCHEMA', @level0name = N'Application', @level1type = N'TABLE', @level1name = N'Cities', @level2type = N'COLUMN', @level2name = N'StateProvinceID';\n\n\nGO\nEXECUTE sp_addextendedproperty @name = N'Description', @value = 'Geographic location of the city', @level0type = N'SCHEMA', @level0name = N'Application', @level1type = N'TABLE', @level1name = N'Cities', @level2type = N'COLUMN', @level2name = N'Location';\n\n\nGO\nEXECUTE sp_addextendedproperty @name = N'Description', @value = 'Latest available population for the City', @level0type = N'SCHEMA', @level0name = N'Application', @level1type = N'TABLE', @level1name = N'Cities', @level2type = N'COLUMN', @level2name = N'LatestRecordedPopulation';\n\n",
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "table_features": [
+        "TEMPORAL"
+      ],
+      "etl_semantics": [
+        "INCREMENTAL",
+        "SCD2"
+      ],
+      "complexity_band": "LOW",
+      "complexity_score": 3,
+      "complexity_factors": [
+        "FOR\\s+SYSTEM_TIME(+3)"
+      ],
+      "columns": [
+        {
+          "name": "CityID",
+          "type": "INT"
+        },
+        {
+          "name": "CityName",
+          "type": "NVARCHAR (50)"
+        },
+        {
+          "name": "StateProvinceID",
+          "type": "INT"
+        },
+        {
+          "name": "LatestRecordedPopulation",
+          "type": "BIGINT"
+        },
+        {
+          "name": "LastEditedBy",
+          "type": "INT"
+        },
+        {
+          "name": "ValidFrom",
+          "type": "DATETIME2 (7) GENERATED ALWAYS AS ROW START"
+        },
+        {
+          "name": "ValidTo",
+          "type": "DATETIME2 (7) GENERATED ALWAYS AS ROW END"
+        }
+      ],
+      "folder_type": null,
+      "folder_path": "Claude/wwi-modernisation-accelerator/fixtures/sql",
+      "medallion_layer": "BRONZE",
+      "layer_subcategory": null,
+      "risk": "LOW",
+      "conversion_confidence": 0.95,
+      "is_unsupported": false,
+      "manual_steps": []
+    },
+    {
+      "id": "OLTP:Website.CalculateCustomerPrice",
+      "name": "CalculateCustomerPrice",
+      "schema": "Website",
+      "object_type": "SCALAR_FUNCTION",
+      "source_project": "OLTP",
+      "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/sql/scalar_function.sql",
+      "raw_ddl": "\nCREATE FUNCTION Website.CalculateCustomerPrice\n(\n    @CustomerID int,\n    @StockItemID int,\n    @PricingDate date\n)\nRETURNS decimal(18,2)\nWITH EXECUTE AS OWNER\nAS\nBEGIN\n    DECLARE @CalculatedPrice decimal(18,2);\n    DECLARE @UnitPrice decimal(18,2);\n    DECLARE @LowestUnitPrice decimal(18,2);\n    DECLARE @HighestDiscountAmount decimal(18,2);\n    DECLARE @HighestDiscountPercentage decimal(18,3);\n    DECLARE @BuyingGroupID int;\n    DECLARE @CustomerCategoryID int;\n    DECLARE @DiscountedUnitPrice decimal(18,2);\n\n    SELECT @BuyingGroupID = BuyingGroupID,\n           @CustomerCategoryID = CustomerCategoryID\n    FROM Sales.Customers\n    WHERE CustomerID = @CustomerID;\n\n    SELECT @UnitPrice = si.UnitPrice\n    FROM Warehouse.StockItems AS si\n    WHERE si.StockItemID = @StockItemID;\n\n    SET @CalculatedPrice = @UnitPrice;\n\n    SET @LowestUnitPrice = (SELECT MIN(sd.UnitPrice)\n                            FROM Sales.SpecialDeals AS sd\n                            WHERE ((sd.StockItemID = @StockItemID) OR (sd.StockItemID IS NULL))\n                            AND ((sd.CustomerID = @CustomerID) OR (sd.CustomerID IS NULL))\n                            AND ((sd.BuyingGroupID = @BuyingGroupID) OR (sd.BuyingGroupID IS NULL))\n                            AND ((sd.CustomerCategoryID = @CustomerCategoryID) OR (sd.CustomerCategoryID IS NULL))\n                            AND ((sd.StockGroupID IS NULL) OR EXISTS (SELECT 1 FROM Warehouse.StockItemStockGroups AS sisg\n                                                                               WHERE sisg.StockItemID = @StockItemID\n                                                                               AND sisg.StockGroupID = sd.StockGroupID))\n                            AND sd.UnitPrice IS NOT NULL\n                            AND @PricingDate BETWEEN sd.StartDate AND sd.EndDate);\n\n    IF @LowestUnitPrice IS NOT NULL AND @LowestUnitPrice < @UnitPrice\n    BEGIN\n        SET @CalculatedPrice = @LowestUnitPrice;\n    END;\n\n    SET @HighestDiscountAmount = (SELECT MAX(sd.DiscountAmount)\n                                  FROM Sales.SpecialDeals AS sd\n                                  WHERE ((sd.StockItemID = @StockItemID) OR (sd.StockItemID IS NULL))\n                                  AND ((sd.CustomerID = @CustomerID) OR (sd.CustomerID IS NULL))\n                                  AND ((sd.BuyingGroupID = @BuyingGroupID) OR (sd.BuyingGroupID IS NULL))\n                                  AND ((sd.CustomerCategoryID = @CustomerCategoryID) OR (sd.CustomerCategoryID IS NULL))\n                                  AND ((sd.StockGroupID IS NULL) OR EXISTS (SELECT 1 FROM Warehouse.StockItemStockGroups AS sisg\n                                                                                     WHERE sisg.StockItemID = @StockItemID\n                                                                                     AND sisg.StockGroupID = sd.StockGroupID))\n                                  AND sd.DiscountAmount IS NOT NULL\n                                  AND @PricingDate BETWEEN sd.StartDate AND sd.EndDate);\n\n    IF @HighestDiscountAmount IS NOT NULL AND (@UnitPrice - @HighestDiscountAmount) < @CalculatedPrice\n    BEGIN\n        SET @CalculatedPrice = @UnitPrice - @HighestDiscountAmount;\n    END;\n\n    SET @HighestDiscountPercentage = (SELECT MAX(sd.DiscountPercentage)\n                                      FROM Sales.SpecialDeals AS sd\n                                      WHERE ((sd.StockItemID = @StockItemID) OR (sd.StockItemID IS NULL))\n                                      AND ((sd.CustomerID = @CustomerID) OR (sd.CustomerID IS NULL))\n                                      AND ((sd.BuyingGroupID = @BuyingGroupID) OR (sd.BuyingGroupID IS NULL))\n                                      AND ((sd.CustomerCategoryID = @CustomerCategoryID) OR (sd.CustomerCategoryID IS NULL))\n                                      AND ((sd.StockGroupID IS NULL) OR EXISTS (SELECT 1 FROM Warehouse.StockItemStockGroups AS sisg\n                                                                                         WHERE sisg.StockItemID = @StockItemID\n                                                                                         AND sisg.StockGroupID = sd.StockGroupID))\n                                      AND sd.DiscountPercentage IS NOT NULL\n                                      AND @PricingDate BETWEEN sd.StartDate AND sd.EndDate);\n\n    IF @HighestDiscountPercentage IS NOT NULL\n    BEGIN\n        SET @DiscountedUnitPrice = ROUND(@UnitPrice * @HighestDiscountPercentage / 100.0, 2);\n        IF @DiscountedUnitPrice < @CalculatedPrice SET @CalculatedPrice = @DiscountedUnitPrice;\n    END;\n\n\n    RETURN @CalculatedPrice;\nEND;\n",
+      "references": {
+        "tables": [
+          "Sales.Customers",
+          "Warehouse.StockItems",
+          "Sales.SpecialDeals",
+          "Warehouse.StockItemStockGroups"
+        ],
+        "procedures": [],
+        "functions": [
+          "Website.CalculateCustomerPrice"
+        ]
+      },
+      "table_features": [],
+      "etl_semantics": [],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "columns": [],
+      "folder_type": null,
+      "folder_path": "Claude/wwi-modernisation-accelerator/fixtures/sql",
+      "medallion_layer": "SILVER",
+      "layer_subcategory": "serving_passthrough",
+      "risk": "NONE",
+      "conversion_confidence": 0.75,
+      "is_unsupported": false,
+      "manual_steps": []
+    },
+    {
+      "id": "OLTP:Integration.MigrateStagedCityData",
+      "name": "MigrateStagedCityData",
+      "schema": "Integration",
+      "object_type": "PROCEDURE",
+      "source_project": "OLTP",
+      "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/sql/set_based_procedure.sql",
+      "raw_ddl": "\nCREATE PROCEDURE Integration.MigrateStagedCityData\nWITH EXECUTE AS OWNER\nAS\nBEGIN\n    SET NOCOUNT ON;\n    SET XACT_ABORT ON;\n\n    DECLARE @EndOfTime datetime2(7) =  '99991231 23:59:59.9999999';\n\n    BEGIN TRAN;\n\n    DECLARE @LineageKey int = (SELECT TOP(1) [Lineage Key]\n                               FROM Integration.Lineage\n                               WHERE [Table Name] = N'City'\n                               AND [Data Load Completed] IS NULL\n                               ORDER BY [Lineage Key] DESC);\n\n    WITH RowsToCloseOff\n    AS\n    (\n        SELECT c.[WWI City ID], MIN(c.[Valid From]) AS [Valid From]\n        FROM Integration.City_Staging AS c\n        GROUP BY c.[WWI City ID]\n    )\n    UPDATE c\n        SET c.[Valid To] = rtco.[Valid From]\n    FROM Dimension.City AS c\n    INNER JOIN RowsToCloseOff AS rtco\n    ON c.[WWI City ID] = rtco.[WWI City ID]\n    WHERE c.[Valid To] = @EndOfTime;\n\n    INSERT Dimension.City\n        ([WWI City ID], City, [State Province], Country, Continent,\n         [Sales Territory], Region, Subregion, [Location],\n         [Latest Recorded Population], [Valid From], [Valid To],\n         [Lineage Key])\n    SELECT [WWI City ID], City, [State Province], Country, Continent,\n           [Sales Territory], Region, Subregion, [Location],\n           [Latest Recorded Population], [Valid From], [Valid To],\n           @LineageKey\n    FROM Integration.City_Staging;\n\n    UPDATE Integration.Lineage\n        SET [Data Load Completed] = SYSDATETIME(),\n            [Was Successful] = 1\n    WHERE [Lineage Key] = @LineageKey;\n\n    UPDATE Integration.[ETL Cutoff]\n        SET [Cutoff Time] = (SELECT [Source System Cutoff Time]\n                             FROM Integration.Lineage\n                             WHERE [Lineage Key] = @LineageKey)\n    FROM Integration.[ETL Cutoff]\n    WHERE [Table Name] = N'City';\n\n    COMMIT;\n\n    RETURN 0;\nEND;\n",
+      "references": {
+        "tables": [
+          "Integration.Lineage",
+          "Integration.City_Staging",
+          "Dimension.City",
+          "Integration.ETL"
+        ],
+        "procedures": [],
+        "functions": [
+          "Dimension.City"
+        ]
+      },
+      "table_features": [],
+      "etl_semantics": [
+        "SCD2",
+        "CUTOFF_WINDOW"
+      ],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "columns": [],
+      "folder_type": null,
+      "folder_path": "Claude/wwi-modernisation-accelerator/fixtures/sql",
+      "medallion_layer": "BRONZE",
+      "layer_subcategory": null,
+      "risk": "NONE",
+      "conversion_confidence": 0.65,
+      "is_unsupported": false,
+      "manual_steps": []
+    },
+    {
+      "id": "OLTP:DataLoadSimulation.FicticiousNamePool",
+      "name": "FicticiousNamePool",
+      "schema": "DataLoadSimulation",
+      "object_type": "TABLE",
+      "source_project": "OLTP",
+      "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/sql/simple_table_lift_and_shift.sql",
+      "raw_ddl": "CREATE TABLE [DataLoadSimulation].[FicticiousNamePool]\n(\n    FullName      NVARCHAR(50)\n  , PreferredName NVARCHAR(25)\n  , LastName      NVARCHAR(25)\n  , ToEmail       NVARCHAR(75)\n)\n",
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "table_features": [],
+      "etl_semantics": [],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "columns": [
+        {
+          "name": "FullName",
+          "type": "NVARCHAR(50)"
+        }
+      ],
+      "folder_type": null,
+      "folder_path": "Claude/wwi-modernisation-accelerator/fixtures/sql",
+      "medallion_layer": "BRONZE",
+      "layer_subcategory": null,
+      "risk": "NONE",
+      "conversion_confidence": 0.95,
+      "is_unsupported": false,
+      "manual_steps": []
+    },
+    {
+      "id": "SSIS:MinimalTestPackage",
+      "name": "MinimalTestPackage",
+      "schema": "ETL",
+      "object_type": "SSIS_PACKAGE",
+      "source_project": "SSIS",
+      "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/ssis/minimal_package.dtsx",
+      "raw_ddl": null,
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "etl_semantics": [
+        "ORCHESTRATION"
+      ],
+      "complexity_band": "HIGH",
+      "complexity_score": 10,
+      "complexity_factors": [],
+      "medallion_layer": "BRONZE",
+      "risk": "MEDIUM",
+      "conversion_confidence": 0.7,
+      "is_unsupported": false,
+      "unsupported": [],
+      "manual_steps": [],
+      "movement_paths": [
+        {
+          "task_name": "Extract Updated City Data to Staging",
+          "source_table": null,
+          "dest_table": "Integration.City_Staging",
+          "movement_type": "INCREMENTAL_TO_STAGING"
+        },
+        {
+          "task_name": "Migrate Staged City Data",
+          "source_table": "Integration.City_Staging",
+          "dest_table": "Fact.City",
+          "movement_type": "STAGING_TO_DW",
+          "etl_proc": "Integration.MigrateStagedCityData"
+        }
+      ],
+      "variables": [
+        {
+          "name": "LastETLCutoffTime",
+          "namespace": "User",
+          "data_type": "7",
+          "value": "4/11/2016 10:39:10 AM"
+        },
+        {
+          "name": "LineageKey",
+          "namespace": "User",
+          "data_type": "3",
+          "value": "0"
+        }
+      ],
+      "connection_managers": [
+        {
+          "id": "WWI_Source_DB",
+          "guid": "{E8464E14-D126-4B86-AFFB-295B0D3506F4}",
+          "type": "OLEDB",
+          "connection_string": "Data Source=.;Initial Catalog=WideWorldImporters;Provider=SQLNCLI11.1;Integrated Security=SSPI;Auto Translate=False;",
+          "server": ".",
+          "database": "WideWorldImporters",
+          "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/ssis/WWI_Source_DB.conmgr"
+        },
+        {
+          "id": "WWI_DW_Destination_DB",
+          "guid": "{7C3E3ECC-C5AD-4675-9618-FC08465F8BC9}",
+          "type": "OLEDB",
+          "connection_string": "Data Source=.;Initial Catalog=WideWorldImportersDW;Provider=SQLNCLI11.1;Integrated Security=SSPI;Auto Translate=False;",
+          "server": ".",
+          "database": "WideWorldImportersDW",
+          "source_file": "/Users/shivaiyer/Documents/Claude/wwi-modernisation-accelerator/fixtures/ssis/WWI_DW_Destination_DB.conmgr"
+        }
+      ]
+    },
+    {
+      "id": "SSIS:MinimalTestPackage:Load City Dimension",
+      "name": "Load City Dimension",
+      "schema": "Integration",
+      "object_type": "SSIS_SEQUENCE_CONTAINER",
+      "source_project": "SSIS",
+      "source_file": null,
+      "raw_ddl": null,
+      "sql_body": null,
+      "expression": null,
+      "data_flow": null,
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "etl_semantics": [
+        "DIMENSION_LOAD"
+      ],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "medallion_layer": "BRONZE",
+      "risk": "LOW",
+      "conversion_confidence": 0.65,
+      "is_unsupported": false,
+      "unsupported": [],
+      "manual_steps": [],
+      "depth": 1,
+      "parent_package": "MinimalTestPackage",
+      "connections": [],
+      "constraints": [
+        {
+          "from": "Package\\Load City Dimension\\Truncate City_Staging",
+          "to": "Package\\Load City Dimension\\Get Last City ETL Cutoff Time",
+          "condition": "SUCCESS",
+          "eval_op": "",
+          "expression": null
+        },
+        {
+          "from": "Package\\Load City Dimension\\Get Last City ETL Cutoff Time",
+          "to": "Package\\Load City Dimension\\Extract Updated City Data to Staging",
+          "condition": "SUCCESS",
+          "eval_op": "",
+          "expression": null
+        },
+        {
+          "from": "Package\\Load City Dimension\\Set TableName to City",
+          "to": "Package\\Load City Dimension\\Get Lineage Key",
+          "condition": "SUCCESS",
+          "eval_op": "",
+          "expression": null
+        },
+        {
+          "from": "Package\\Load City Dimension\\Extract Updated City Data to Staging",
+          "to": "Package\\Load City Dimension\\Migrate Staged City Data",
+          "condition": "SUCCESS",
+          "eval_op": "",
+          "expression": null
+        },
+        {
+          "from": "Package\\Load City Dimension\\Get Lineage Key",
+          "to": "Package\\Load City Dimension\\Truncate City_Staging",
+          "condition": "SUCCESS",
+          "eval_op": "",
+          "expression": null
+        }
+      ]
+    },
+    {
+      "id": "SSIS:MinimalTestPackage:Extract Updated City Data to Staging",
+      "name": "Extract Updated City Data to Staging",
+      "schema": "Integration",
+      "object_type": "SSIS_DATA_FLOW",
+      "source_project": "SSIS",
+      "source_file": null,
+      "raw_ddl": null,
+      "sql_body": null,
+      "expression": null,
+      "data_flow": {
+        "components": [
+          {
+            "ref_id": "Package\\Load City Dimension\\Extract Updated City Data to Staging\\Integration_City_Staging",
+            "name": "Integration_City_Staging",
+            "class_id": "Microsoft.OLEDBDestination",
+            "category": "OLE_DB_DESTINATION",
+            "tables": [
+              "Integration.City_Staging"
+            ],
+            "sql_commands": []
+          },
+          {
+            "ref_id": "Package\\Load City Dimension\\Extract Updated City Data to Staging\\Integration_GetCityUpdates",
+            "name": "Integration_GetCityUpdates",
+            "class_id": "Microsoft.OLEDBSource",
+            "category": "OLE_DB_SOURCE",
+            "tables": [],
+            "sql_commands": [
+              "EXEC Integration.GetCityUpdates ?, ?\nWITH RESULT SETS\n(\n    (\n        [WWI City ID] int,\n        City nvarchar(50),\n        [State Province] nvarchar(50),\n        Country nvarchar(50),\n        Continent nvarchar(30),\n        [Sales Territory] nvarchar(50),\n        Region nvarchar(30),\n        Subregion nvarchar(30),\n        [Location] geography,\n        [Latest Recorded Population] bigint,\n        [Valid From] datetime2(7),\n        [Valid To] datetime2(7)\n    )\n);"
+            ]
+          }
+        ],
+        "unsupported": []
+      },
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "etl_semantics": [
+        "INCREMENTAL"
+      ],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "medallion_layer": "BRONZE",
+      "risk": "LOW",
+      "conversion_confidence": 0.65,
+      "is_unsupported": false,
+      "unsupported": [],
+      "manual_steps": [],
+      "depth": 2,
+      "parent_package": "MinimalTestPackage",
+      "connections": [],
+      "constraints": []
+    },
+    {
+      "id": "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time",
+      "name": "Get Last City ETL Cutoff Time",
+      "schema": "Integration",
+      "object_type": "SSIS_EXECUTE_SQL",
+      "source_project": "SSIS",
+      "source_file": null,
+      "raw_ddl": null,
+      "sql_body": "EXEC Integration.GetLastETLCutoffTime ?;",
+      "expression": null,
+      "data_flow": null,
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "etl_semantics": [
+        "CUTOFF_WINDOW"
+      ],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "medallion_layer": "BRONZE",
+      "risk": "LOW",
+      "conversion_confidence": 0.65,
+      "is_unsupported": false,
+      "unsupported": [],
+      "manual_steps": [],
+      "depth": 2,
+      "parent_package": "MinimalTestPackage",
+      "connections": [
+        "{7C3E3ECC-C5AD-4675-9618-FC08465F8BC9}"
+      ],
+      "constraints": []
+    },
+    {
+      "id": "SSIS:MinimalTestPackage:Get Lineage Key",
+      "name": "Get Lineage Key",
+      "schema": "Integration",
+      "object_type": "SSIS_EXECUTE_SQL",
+      "source_project": "SSIS",
+      "source_file": null,
+      "raw_ddl": null,
+      "sql_body": "EXEC Integration.GetLineageKey ?, ?;",
+      "expression": null,
+      "data_flow": null,
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "etl_semantics": [
+        "LINEAGE_TRACKING"
+      ],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "medallion_layer": "BRONZE",
+      "risk": "LOW",
+      "conversion_confidence": 0.65,
+      "is_unsupported": false,
+      "unsupported": [],
+      "manual_steps": [],
+      "depth": 2,
+      "parent_package": "MinimalTestPackage",
+      "connections": [
+        "{7C3E3ECC-C5AD-4675-9618-FC08465F8BC9}"
+      ],
+      "constraints": []
+    },
+    {
+      "id": "SSIS:MinimalTestPackage:Migrate Staged City Data",
+      "name": "Migrate Staged City Data",
+      "schema": "Integration",
+      "object_type": "SSIS_EXECUTE_SQL",
+      "source_project": "SSIS",
+      "source_file": null,
+      "raw_ddl": null,
+      "sql_body": "EXEC Integration.MigrateStagedCityData;",
+      "expression": null,
+      "data_flow": null,
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "etl_semantics": [
+        "STAGING_TO_DW"
+      ],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "medallion_layer": "BRONZE",
+      "risk": "LOW",
+      "conversion_confidence": 0.65,
+      "is_unsupported": false,
+      "unsupported": [],
+      "manual_steps": [],
+      "depth": 2,
+      "parent_package": "MinimalTestPackage",
+      "connections": [
+        "{7C3E3ECC-C5AD-4675-9618-FC08465F8BC9}"
+      ],
+      "constraints": []
+    },
+    {
+      "id": "SSIS:MinimalTestPackage:Set TableName to City",
+      "name": "Set TableName to City",
+      "schema": "Integration",
+      "object_type": "SSIS_EXPRESSION",
+      "source_project": "SSIS",
+      "source_file": null,
+      "raw_ddl": null,
+      "sql_body": null,
+      "expression": "@[User::TableName] = \"City\"",
+      "data_flow": null,
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "etl_semantics": [],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "medallion_layer": "BRONZE",
+      "risk": "LOW",
+      "conversion_confidence": 0.65,
+      "is_unsupported": false,
+      "unsupported": [],
+      "manual_steps": [],
+      "depth": 2,
+      "parent_package": "MinimalTestPackage",
+      "connections": [],
+      "constraints": []
+    },
+    {
+      "id": "SSIS:MinimalTestPackage:Truncate City_Staging",
+      "name": "Truncate City_Staging",
+      "schema": "Integration",
+      "object_type": "SSIS_EXECUTE_SQL",
+      "source_project": "SSIS",
+      "source_file": null,
+      "raw_ddl": null,
+      "sql_body": "DELETE FROM Integration.City_Staging;",
+      "expression": null,
+      "data_flow": null,
+      "references": {
+        "tables": [],
+        "procedures": [],
+        "functions": []
+      },
+      "etl_semantics": [
+        "FULL_LOAD",
+        "INCREMENTAL"
+      ],
+      "complexity_band": "LOW",
+      "complexity_score": 0,
+      "complexity_factors": [],
+      "medallion_layer": "BRONZE",
+      "risk": "LOW",
+      "conversion_confidence": 0.65,
+      "is_unsupported": false,
+      "unsupported": [],
+      "manual_steps": [],
+      "depth": 2,
+      "parent_package": "MinimalTestPackage",
+      "connections": [
+        "{7C3E3ECC-C5AD-4675-9618-FC08465F8BC9}"
+      ],
+      "constraints": []
+    }
+  ]
+}

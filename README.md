@@ -72,6 +72,26 @@ Full guides: [`docs/SKILLS.md`](docs/SKILLS.md) | [`mcp/README.md`](mcp/README.m
 
 ---
 
+## Example outputs
+
+Want to see what the pipeline actually produces before running it?
+
+The [`docs/example-run/`](docs/example-run/) directory contains the **complete
+output of a full pipeline run against the
+[Wide World Importers sample corpus](https://github.com/microsoft/sql-server-samples/tree/master/samples/databases/wide-world-importers)**,
+committed as a worked example:
+
+- **[`docs/example-run/pipeline-outputs/`](docs/example-run/pipeline-outputs/)** — all analysis outputs: inventory, dependency graph, impact analysis, medallion mapping, target-state architecture, test matrix, risk register
+- **[`docs/example-run/pipeline-converted/`](docs/example-run/pipeline-converted/)** — all conversion outputs: Databricks SQL DDL (one file per object, organised by layer), PySpark modules, Workflow spec, review-required items, conversion manifest
+- **[`docs/example-run/`](docs/example-run/)** — validation summary, adversarial review, and remediation backlog
+
+> These outputs were generated during initial testing and validation of this
+> accelerator. When you run the pipeline against your own source repo, the
+> outputs will reflect your actual codebase — object names, counts, converted
+> SQL, and Workflow tasks will all differ from the WWI examples shown here.
+
+---
+
 ## What the pipeline produces
 
 Point either tool at a SQL Server/Azure Synapse database project (SSDT) plus

@@ -1,0 +1,436 @@
+{
+  "generated_at": "2026-06-30T12:34:41.326450+00:00",
+  "architecture_decision": {
+    "chosen_architecture": "medallion",
+    "is_default": true,
+    "evaluated_alternatives": {
+      "medallion": {
+        "fit": "STRONG",
+        "reason": "Source DW already implements a 3-tier model (Integration=staging, Dimension=conformed entities, Fact=measures) with SCD2 history and a watermark-driven incremental pattern. This maps almost 1:1 onto Bronze (raw/staging), Silver (conformed/cleansed), Gold (aggregated/serving)."
+      },
+      "data_vault": {
+        "fit": "WEAK",
+        "reason": "Data Vault (Hub/Link/Satellite) suits environments with many fast-changing source systems and a need for full historised raw integration before any business modelling. This workload has a single OLTP source and an existing, well-formed dimensional model \u2014 Data Vault would add modelling overhead (3x more tables, satellite-loading logic) without a corresponding integration benefit."
+      },
+      "one_big_table": {
+        "fit": "NOT SUITABLE",
+        "reason": "OBT/wide-table patterns suit single-purpose analytics marts with one dominant query pattern. This workload has 14 dimension/fact targets and a reusable conformed-dimension model serving multiple fact tables \u2014 collapsing to OBT would duplicate dimension attributes across facts and break SCD2 history reuse."
+      }
+    },
+    "signals_observed": {
+      "has_scd2_dimensions": true,
+      "has_conformed_dimension_fact_model": true,
+      "has_staging_layer": true
+    },
+    "override_mechanism": "Pass architecture_override=<'medallion'|'data_vault'|'one_big_table'> to generate_target_state_design(); recorded here regardless of which value is chosen so the decision is auditable."
+  },
+  "medallion_mapping_count": 112,
+  "medallion_layer_distribution": {
+    "BRONZE": 72,
+    "SILVER": 34,
+    "GOLD": 6
+  },
+  "unity_catalog_design": {
+    "catalog_strategy": {
+      "pattern": "One catalog per environment: wwi_dev, wwi_test, wwi_prod",
+      "rationale": "Unity Catalog catalogs are the natural environment-isolation boundary \u2014 permissions, lineage, and audit logs are catalog-scoped, and promoting a table between environments is a deliberate cross-catalog operation rather than a config-flag toggle that could leak dev data into prod.",
+      "tradeoffs": "Requires duplicating schema/table DDL (via CI/CD, see section 8) across catalogs rather than relying on a single shared catalog with environment tagging; mitigated by Databricks Asset Bundles templating.",
+      "assumptions": "One Databricks workspace per environment is in scope; if all environments share one workspace, catalogs still provide adequate isolation."
+    },
+    "schema_strategy": {
+      "pattern": "One schema per medallion layer within each catalog: bronze, silver, gold, plus a non-data schema `ops` for audit/lineage/quality-check metadata tables.",
+      "rationale": "Schema-per-layer keeps access control simple (e.g. analysts get SELECT on gold only) and matches the mental model already used by the source DW (Integration/Dimension/Fact). It avoids the alternative \u2014 schema-per-domain with layer as a table prefix \u2014 which would require every consumer role to be granted per-domain rather than per-layer.",
+      "tradeoffs": "Domain ownership (e.g. 'who owns Sales tables') is less visible at the schema level and must be tracked via table-level tags/comments instead.",
+      "assumptions": "No regulatory requirement forces physical separation of domains into separate schemas (e.g. PII isolation) \u2014 see security note in section 7 if this assumption changes for Sales.Customers / Purchasing.Suppliers."
+    },
+    "naming_convention": {
+      "pattern": "<catalog>.<layer_schema>.<source_schema>__<entity> for OLTP-origin tables; <catalog>.<layer_schema>.<entity> for DW-origin tables (DW schema is implied by the target layer schema, so it is dropped to avoid redundancy, e.g. Dimension.City -> wwi_prod.silver.city, not silver.dimension__city).",
+      "rationale": "OLTP tables retain their source schema prefix (e.g. sales__orders) because multiple OLTP schemas can land in the same Bronze schema and name collisions are possible (e.g. Sales vs Purchasing both could have an 'Orders'-like table); DW tables don't need this since Dimension/Fact schemas map 1:1 onto Silver/Gold.",
+      "tradeoffs": "Asymmetric naming (prefixed vs not) requires a documented rule rather than one universal pattern \u2014 mitigated by encoding the rule in this design doc and in the accelerator's conversion templates so it's applied consistently, not left to manual judgement.",
+      "assumptions": "snake_case is acceptable for all consumers (BI tools, notebooks); if a downstream tool requires the original PascalCase names, expose them via a view layer rather than renaming the managed tables."
+    },
+    "environments": [
+      "dev",
+      "test",
+      "prod"
+    ]
+  },
+  "file_layout_recommendations": [
+    {
+      "target_class": "Gold fact tables",
+      "objects": [
+        "DW:Fact.Movement",
+        "DW:Fact.Order",
+        "DW:Fact.Purchase",
+        "DW:Fact.Sale",
+        "DW:Fact.Stock",
+        "DW:Fact.Transaction"
+      ],
+      "file_format": "Delta",
+      "partitioning": "PARTITIONED BY (date_key) where a date/period dimension key exists (mirrors the source PS_Date partition scheme)",
+      "clustering": "Liquid clustering on the high-cardinality foreign keys used in fact-dimension joins (e.g. City Key, Customer Key, Stock Item Key) instead of legacy Z-ORDER, since fact tables receive ongoing incremental writes and liquid clustering avoids full-table OPTIMIZE rewrites.",
+      "rationale": "Matches existing date-partitioned access pattern; liquid clustering is justified here because fact tables are both write-heavy (daily incremental) and read with selective dimension-key filters.",
+      "tradeoffs": "Liquid clustering requires Databricks Runtime 13.3+ and is a newer feature with less operational history than Z-ORDER; fallback is Z-ORDER on the same keys.",
+      "assumptions": "Fact table growth is append-mostly (matches FACT_LOAD/INCREMENTAL semantics observed in source); if late-arriving updates to historical facts are common, re-validate partition pruning effectiveness."
+    },
+    {
+      "target_class": "Silver dimension tables (SCD2)",
+      "objects": [
+        "DW:Dimension.City",
+        "DW:Dimension.Customer",
+        "DW:Dimension.Date",
+        "DW:Dimension.Employee",
+        "DW:Dimension.Payment",
+        "DW:Dimension.Stock",
+        "DW:Dimension.Supplier",
+        "DW:Dimension.Transaction"
+      ],
+      "file_format": "Delta",
+      "partitioning": "Not partitioned \u2014 dimension tables are small relative to facts (low row counts) and partitioning would create excessive small files.",
+      "clustering": "Liquid clustering on the natural/business key (e.g. WWI City ID) to keep MERGE-based SCD2 upserts efficient as the surrogate-key lookup path.",
+      "rationale": "SCD2 logic is implemented via MERGE; clustering on the natural key (not the surrogate key) optimises the join condition used to find the 'current' row before inserting a new version.",
+      "tradeoffs": "None significant at this table size (~thousands to low millions of rows).",
+      "assumptions": "Dimension row counts remain in the thousands-to-low-millions range typical of WWI; if a dimension grows to billions of rows, revisit partitioning by a coarse natural-key hash."
+    },
+    {
+      "target_class": "Bronze staging / landing tables",
+      "objects": [
+        "DW:Integration.City_Staging",
+        "DW:Integration.Customer_Staging",
+        "DW:Integration.Employee_Staging",
+        "DW:Integration.Movement_Staging",
+        "DW:Integration.Order_Staging",
+        "DW:Integration.PaymentMethod_Staging",
+        "DW:Integration.Purchase_Staging",
+        "DW:Integration.Sale_Staging",
+        "DW:Integration.StockHolding_Staging",
+        "DW:Integration.StockItem_Staging",
+        "DW:Integration.Supplier_Staging",
+        "DW:Integration.TransactionType_Staging",
+        "DW:Integration.Transaction_Staging",
+        "SSIS:DailyETLMain:Extract Updated City Data to Staging",
+        "SSIS:DailyETLMain:Migrate Staged City Data",
+        "SSIS:DailyETLMain:Truncate City_Staging",
+        "SSIS:DailyETLMain:Extract Updated Customer Data to Staging",
+        "SSIS:DailyETLMain:Migrate Staged Customer Data",
+        "SSIS:DailyETLMain:Truncate Customer_Staging",
+        "SSIS:DailyETLMain:Extract Updated Employee Data to Staging"
+      ],
+      "file_format": "Delta",
+      "partitioning": "Not partitioned (or partitioned by ingestion_date if retained beyond a single run) \u2014 staging tables are truncate-and-load (overwrite) each cycle, matching the source's truncate-then-load pattern.",
+      "clustering": "None \u2014 transient data, optimised for full-table overwrite write throughput rather than selective read.",
+      "rationale": "Preserves the source's deliberate full-refresh-per-cycle semantics; adding partitioning/clustering to a table that's truncated every run adds write overhead with no read-time benefit.",
+      "tradeoffs": "If staging tables are later repurposed for audit/replay (keeping history instead of overwriting), partitioning by ingestion_date should be revisited.",
+      "assumptions": "Staging tables are not relied upon as a system-of-record after the downstream Silver/Gold write succeeds."
+    },
+    {
+      "target_class": "Bronze raw OLTP landing tables",
+      "objects": "all OLTP-origin TABLE objects not already covered above",
+      "file_format": "Delta, ingested via Auto Loader (cloudFiles) or Lakeflow Connect/JDBC batch read",
+      "partitioning": "PARTITIONED BY (ingestion_date) to support efficient time-bounded reprocessing and to bound small-file growth from incremental ingestion.",
+      "clustering": "None by default; add liquid clustering on the natural key only for tables feeding the geography-bearing dimensions (see manual_intervention_list.md) where downstream joins are frequent.",
+      "rationale": "Bronze should be an immutable, append-only history of what was received, partitioned for incremental processing rather than business-key access.",
+      "tradeoffs": "Date partitioning on Bronze plus natural-key clustering downstream in Silver means the same data is laid out two different ways across layers \u2014 by design, since Bronze and Silver serve different access patterns.",
+      "assumptions": "Source system can supply a reliable last-modified or CDC timestamp; if not, ingestion_date defaults to job run date, which weakens point-in-time reprocessing."
+    }
+  ],
+  "orchestration_mapping": {
+    "package_to_job": {
+      "rule": "Each SSIS package becomes one Databricks Workflow (multi-task job).",
+      "example": "DailyETLMain -> Workflow job `wwi_daily_etl_main`",
+      "rationale": "Preserves the existing single-pipeline mental model and keeps the job's run history, alerting, and SLA configuration in one place."
+    },
+    "sequence_container_to_task_group": {
+      "rule": "Each Sequence Container becomes either a Workflow task group (if-all-success dependency chain) or, preferably, its own job-as-task referenced from the parent job \u2014 one per entity (City, Customer, Date, Employee, Payment, StockItem, Supplier, Transaction, Movement, Order, Purchase, Sale, Stock).",
+      "rationale": "Per-entity isolation means a failure loading one dimension doesn't block unrelated dimensions from completing, and lets entity loads run in parallel where the dependency graph allows it (see ordering note below) instead of SSIS's single-threaded sequential container execution.",
+      "tradeoffs": "Increases the number of Workflow task definitions to maintain (13 vs 1); mitigated by generating them from a single parameterised job template (entity name as a job parameter) rather than hand-authoring 13 jobs.",
+      "mapped_entities": [
+        {
+          "source_container": "SSIS:DailyETLMain:Load City Dimension",
+          "entity": "City",
+          "target_databricks_workflow_job": "wwi_load_city",
+          "step_count": 4,
+          "steps": [
+            "Extract Updated City Data to Staging",
+            "Get Last City ETL Cutoff Time",
+            "Migrate Staged City Data",
+            "Truncate City_Staging"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Customer Dimension",
+          "entity": "Customer",
+          "target_databricks_workflow_job": "wwi_load_customer",
+          "step_count": 4,
+          "steps": [
+            "Extract Updated Customer Data to Staging",
+            "Get Last Customer ETL Cutoff Time",
+            "Migrate Staged Customer Data",
+            "Truncate Customer_Staging"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Employee Dimension",
+          "entity": "Employee",
+          "target_databricks_workflow_job": "wwi_load_employee",
+          "step_count": 4,
+          "steps": [
+            "Extract Updated Employee Data to Staging",
+            "Get Last Employee ETL Cutoff Time",
+            "Migrate Staged Employee Data",
+            "Truncate Employee_Staging"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Movement Fact",
+          "entity": "Movement",
+          "target_databricks_workflow_job": "wwi_load_movement",
+          "step_count": 9,
+          "steps": [
+            "Extract Updated Movement Data to Staging",
+            "Get Last Movement ETL Cutoff Time",
+            "Migrate Staged Movement Data",
+            "Truncate Movement_Staging",
+            "Get Last Movement ETL Cutoff Time",
+            "Get Last Movement ETL Cutoff Time",
+            "Get Last Movement ETL Cutoff Time",
+            "Get Last Movement ETL Cutoff Time",
+            "Get Last Movement ETL Cutoff Time"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Order Fact",
+          "entity": "Order",
+          "target_databricks_workflow_job": "wwi_load_order",
+          "step_count": 3,
+          "steps": [
+            "Extract Updated Order Data to Staging",
+            "Migrate Staged Order Data",
+            "Truncate Order_Staging"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Payment Method Dimension",
+          "entity": "Payment Method",
+          "target_databricks_workflow_job": "wwi_load_payment_method",
+          "step_count": 3,
+          "steps": [
+            "Extract Updated Payment Method Data to Staging",
+            "Get Last Payment Method ETL Cutoff Time",
+            "Migrate Staged Payment Method Data"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Purchase Fact",
+          "entity": "Purchase",
+          "target_databricks_workflow_job": "wwi_load_purchase",
+          "step_count": 3,
+          "steps": [
+            "Extract Updated Purchase Data to Staging",
+            "Migrate Staged Purchase Data",
+            "Truncate Purchase_Staging"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Sale Fact",
+          "entity": "Sale",
+          "target_databricks_workflow_job": "wwi_load_sale",
+          "step_count": 3,
+          "steps": [
+            "Extract Updated Sale Data to Staging",
+            "Migrate Staged Sale Data",
+            "Truncate Sale_Staging"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Stock Holding Fact",
+          "entity": "Stock Holding",
+          "target_databricks_workflow_job": "wwi_load_stock_holding",
+          "step_count": 2,
+          "steps": [
+            "Extract All Stock Holding Data to Staging",
+            "Migrate Staged Stock Holding Data"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Stock Item Dimension",
+          "entity": "Stock Item",
+          "target_databricks_workflow_job": "wwi_load_stock_item",
+          "step_count": 3,
+          "steps": [
+            "Extract Updated Stock Item Data to Staging",
+            "Get Last Stock Item ETL Cutoff Time",
+            "Migrate Staged Stock Item Data"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Supplier Dimension",
+          "entity": "Supplier",
+          "target_databricks_workflow_job": "wwi_load_supplier",
+          "step_count": 4,
+          "steps": [
+            "Extract Updated Supplier Data to Staging",
+            "Get Last Supplier ETL Cutoff Time",
+            "Migrate Staged Supplier Data",
+            "Truncate Supplier_Staging"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Transaction Fact",
+          "entity": "Transaction",
+          "target_databricks_workflow_job": "wwi_load_transaction",
+          "step_count": 7,
+          "steps": [
+            "Extract Updated Transaction Data to Staging",
+            "Migrate Staged Transaction Data",
+            "Truncate Transaction_Staging",
+            "Extract Updated Transaction Type Data to Staging",
+            "Get Last Transaction Type ETL Cutoff Time",
+            "Migrate Staged Transaction Type Data",
+            "Truncate TransactionType_Staging"
+          ]
+        },
+        {
+          "source_container": "SSIS:DailyETLMain:Load Transaction Type Dimension",
+          "entity": "Transaction Type",
+          "target_databricks_workflow_job": "wwi_load_transaction_type",
+          "step_count": 3,
+          "steps": [
+            "Extract Updated Transaction Type Data to Staging",
+            "Get Last Transaction Type ETL Cutoff Time",
+            "Migrate Staged Transaction Type Data"
+          ]
+        }
+      ]
+    },
+    "five_step_pattern_to_tasks": {
+      "rule": "The recurring 5-step pattern (Get Cutoff -> Truncate Staging -> Extract -> Get Lineage Key -> Migrate) becomes 3 Workflow tasks, not 5: (1) a PySpark/SQL task that reads the watermark and extracts incrementally in one step (Auto Loader or a parameterised SQL read replaces the separate truncate+extract steps because Delta overwrite mode makes the explicit TRUNCATE redundant), (2) a MERGE task that applies SCD2 logic and lineage-key assignment together, (3) a watermark-update task that advances the cutoff only after step 2 succeeds.",
+      "rationale": "Several SSIS steps exist to work around SQL Server's lack of atomic upsert-with-history; Delta's MERGE INTO with SCD2 expressions collapses those steps. Fewer tasks means fewer points of partial failure to reason about during cutover.",
+      "tradeoffs": "Less granular task-level retry (a failure anywhere in the combined extract step reprocesses the whole step) \u2014 acceptable because the step is now idempotent (Delta overwrite/MERGE), unlike the original truncate-then-load sequence which was not safe to blindly retry mid-sequence.",
+      "watermark_design": "Replace the `Integration.ETL Cutoff` SQL table with a small Delta table `wwi_<env>.ops.etl_watermark(entity, last_cutoff_ts)`, read and updated via the same MERGE transaction pattern as the data load to guarantee watermark advancement is atomic with the data write."
+    },
+    "precedence_constraints_to_dependencies": {
+      "rule": "SSIS precedence constraints (Success/Failure/Completion) map directly to Databricks Workflow task `depends_on` with `run_if` conditions (ALL_SUCCESS / ALL_FAILED / ALL_DONE).",
+      "rationale": "1:1 semantic equivalent exists in Workflows \u2014 no redesign needed here."
+    },
+    "expressions_to_parameters": {
+      "rule": "The 15 SSIS Expressions (dynamic SQL strings interpolating TableName/LastETLCutoffTime/TargetETLCutoffTime variables) become Workflow task parameters / job-level base parameters consumed by Python tasks, or Jinja-style templating in Databricks Asset Bundle job definitions.",
+      "rationale": "SSIS's expression language has no Databricks equivalent; parameterised notebooks/Python tasks are the direct replacement for runtime string construction.",
+      "count_affected": 15
+    },
+    "scheduling": {
+      "rule": "Replace the SQL Server Agent daily job with a Databricks Workflow schedule (cron) on the top-level job, with email/Slack alerting on failure configured via Workflow notification settings.",
+      "rationale": "Native Workflow scheduling avoids depending on an external scheduler and keeps schedule, task graph, and alerting in one definition."
+    },
+    "summary_counts": {
+      "packages": 1,
+      "sequence_containers": 13,
+      "execute_sql_tasks": 53,
+      "data_flow_tasks": 13,
+      "expressions": 15
+    }
+  },
+  "code_mapping": {
+    "rule": "Target language follows object type first, then conversion classification: set-based, declarative objects (tables, views, simple procs/functions) target Databricks SQL; objects whose source logic is row-by-row, dynamic, or otherwise procedural (cursors, dynamic SQL, SSIS data flows) target PySpark.",
+    "rationale": "Databricks SQL gives the shortest path to a maintainable, SQL-literate-friendly target for anything that was already declarative T-SQL, preserving the skill set of the existing SQL-focused team. PySpark is reserved for cases where T-SQL's procedural escape hatches (CURSOR, sp_executesql, WHILE loops) have no direct SQL equivalent and must become explicit DataFrame/Python logic.",
+    "tradeoffs": "Splitting the codebase across two languages means two skill sets are needed on the migration team; mitigated by keeping the PySpark surface area as small as possible (only the ~49 rewrite-required + 81 manual-redesign objects from the impact analysis, not the full 419).",
+    "assumptions": "Databricks SQL stored procedures (DBR 14.1+) are available in the target workspace; if running on an older runtime, all PROCEDURE objects default to PySpark/Python tasks instead.",
+    "distribution": {
+      "Delta DDL (Databricks SQL)": 84,
+      "PySpark (notebook / Python task) \u2014 procedural logic exceeds SQL-only conversion": 87,
+      "Databricks SQL (stored procedure / SQL UDF, DBR 14.1+) or a parameterised SQL task": 80,
+      "Databricks SQL (view / CTAS)": 28,
+      "Databricks Workflows task definition (orchestration, not data-processing code)": 82,
+      "PySpark (Auto Loader / DataFrame transform / Delta write)": 13,
+      "Case-by-case review": 23,
+      "Delta identity column (GENERATED ALWAYS AS IDENTITY) or a small counter table": 34
+    },
+    "examples": {
+      "Delta DDL (Databricks SQL)": [
+        "OLTP:Application.Cities",
+        "OLTP:Application.StateProvinces",
+        "OLTP:Purchasing.Suppliers",
+        "OLTP:Sales.Customers",
+        "OLTP:Application.Countries"
+      ],
+      "PySpark (notebook / Python task) \u2014 procedural logic exceeds SQL-only conversion": [
+        "OLTP:Integration.GetCityUpdates",
+        "OLTP:Integration.GetStockItemUpdates",
+        "OLTP:Application.Configuration_EnableInMemory",
+        "OLTP:Integration.GetEmployeeUpdates",
+        "OLTP:DataLoadSimulation.UpdateCustomFields"
+      ],
+      "Databricks SQL (stored procedure / SQL UDF, DBR 14.1+) or a parameterised SQL task": [
+        "DW:Integration.MigrateStagedCityData",
+        "DW:Integration.MigrateStagedCustomerData",
+        "DW:Integration.MigrateStagedEmployeeData",
+        "DW:Integration.MigrateStagedOrderData",
+        "DW:Integration.MigrateStagedPurchaseData"
+      ],
+      "Databricks SQL (view / CTAS)": [
+        "OLTP:WebApi.Customers",
+        "OLTP:WebApi.Suppliers",
+        "OLTP:WebApi.Cities",
+        "OLTP:WebApi.SalesOrders",
+        "OLTP:WebApi.StateProvinces"
+      ],
+      "Databricks Workflows task definition (orchestration, not data-processing code)": [
+        "SSIS:DailyETLMain:Get Lineage Key",
+        "SSIS:DailyETLMain:Get Lineage Key",
+        "SSIS:DailyETLMain:Get Lineage Key",
+        "SSIS:DailyETLMain:Get Last Movement ETL Cutoff Time",
+        "SSIS:DailyETLMain:Get Lineage Key"
+      ],
+      "PySpark (Auto Loader / DataFrame transform / Delta write)": [
+        "SSIS:DailyETLMain:Extract Updated City Data to Staging",
+        "SSIS:DailyETLMain:Extract Updated Customer Data to Staging",
+        "SSIS:DailyETLMain:Extract Updated Employee Data to Staging",
+        "SSIS:DailyETLMain:Extract Updated Movement Data to Staging",
+        "SSIS:DailyETLMain:Extract Updated Order Data to Staging"
+      ],
+      "Case-by-case review": [
+        "OLTP:Website.SensorDataList",
+        "OLTP:dbo.Application",
+        "OLTP:dbo.DataLoadSimulation",
+        "OLTP:dbo.Integration",
+        "OLTP:dbo.PowerBI"
+      ],
+      "Delta identity column (GENERATED ALWAYS AS IDENTITY) or a small counter table": [
+        "OLTP:Sequences.BuyingGroupID",
+        "OLTP:Sequences.CityID",
+        "OLTP:Sequences.ColorID",
+        "OLTP:Sequences.CountryID",
+        "OLTP:Sequences.CustomerCategoryID"
+      ]
+    }
+  },
+  "observability": {
+    "audit_logging": {
+      "recommendation": "Enable Unity Catalog audit logging (system.access.audit) for all catalogs; replace the source `Integration.Lineage` table with the native Workflow job-run history plus a thin `ops.load_audit` Delta table recording entity, watermark range, row counts in/out, and job run ID for each load.",
+      "rationale": "Unity Catalog audit logs cover who-accessed-what; they don't capture business-level load metadata (rows processed, watermark advanced), so a purpose-built audit table is still needed alongside the platform's logs.",
+      "tradeoffs": "One more table to maintain, but far lighter weight than the source `Integration.Lineage` table since job-run ID and timestamps are populated automatically by the Workflow runtime via task parameters."
+    },
+    "lineage": {
+      "recommendation": "Rely on Unity Catalog's automatic column- and table-level lineage (captured for any read/write through Spark/Databricks SQL) rather than hand-building a lineage system; surface it via the Catalog Explorer lineage graph for impact analysis on future schema changes.",
+      "rationale": "Automatic lineage requires zero additional code and directly answers the kind of dependency questions this accelerator currently answers via static analysis (dependencies.json) \u2014 once migrated, that capability is native.",
+      "tradeoffs": "Automatic lineage only covers Databricks-native reads/writes; any external tool reading Delta tables directly (e.g. via JDBC from a BI tool) won't appear unless it goes through Unity Catalog's audited path."
+    },
+    "data_quality": {
+      "recommendation": "Implement quality checks as Delta Live Tables expectations or Lakehouse Monitoring profiles on Silver/Gold tables: not-null and uniqueness checks on natural/surrogate keys, referential checks that every fact's dimension keys resolve, and freshness checks against the watermark table.",
+      "rationale": "93 SCD2 dimensions and 124 incrementally-loaded objects are exactly the cases where a silent join failure or stale watermark would otherwise go unnoticed until a downstream report looks wrong.",
+      "tradeoffs": "DLT expectations require adopting the DLT framework for at least the tables they protect; if the team prefers plain Workflows + notebooks, Lakehouse Monitoring or a custom Great Expectations suite achieves the same checks with more setup code."
+    }
+  },
+  "cicd": {
+    "tooling": "Databricks Asset Bundles (DAB) for all Workflow job definitions, DDL, and notebook/Python source; standard git-based CI (GitHub Actions or Azure DevOps, matching whichever the team already uses for the SSDT projects today).",
+    "rationale": "DAB gives a single declarative artifact (databricks.yml) covering jobs, schemas, and permissions per environment \u2014 directly analogous to how the .sqlproj/.dtproj files already declare this solution's structure today, so the team's existing 'infrastructure as project file' mental model carries over.",
+    "environment_promotion": {
+      "pattern": "dev -> test -> prod, one DAB target per environment mapping to the corresponding wwi_dev / wwi_test / wwi_prod catalog.",
+      "promotion_gate": "Merge to main triggers deploy to test; a tagged release triggers deploy to prod after the test pack (see Step 7 of this accelerator) passes against the test catalog."
+    },
+    "branching": "Trunk-based development with short-lived feature branches per object/entity conversion, mirroring the per-entity scoping already visible in the source SSIS sequence containers.",
+    "rollback": "Because all schema/job definitions are declarative (DAB) and data writes are Delta (versioned), rollback is two-part: redeploy the previous DAB bundle version, and use Delta `RESTORE TABLE ... TO VERSION AS OF` for any table whose data must also revert.",
+    "tradeoffs": "DAB is the Databricks-native choice but ties CI/CD tooling to the Databricks CLI; teams already standardised on Terraform for all cloud resources may prefer the Databricks Terraform provider instead for consistency, at the cost of slightly more verbose job/schema definitions.",
+    "assumptions": "A separate test pack (Step 7 of this accelerator) will provide the automated validation gate referenced above; until that exists, promotion to prod should remain a manual approval step."
+  }
+}

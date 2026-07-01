@@ -1,0 +1,339 @@
+{
+  "generated_at": "2026-06-30T04:57:51.406964+00:00",
+  "accelerator_version": "0.1.0",
+  "source_system": {
+    "databases": [
+      {
+        "name": "WideWorldImporters",
+        "role": "OLTP",
+        "ssdt_project": "wwi-ssdt"
+      },
+      {
+        "name": "WideWorldImportersDW",
+        "role": "DW",
+        "ssdt_project": "wwi-dw-ssdt"
+      }
+    ],
+    "ssis_packages": [
+      {
+        "name": "DailyETLMain",
+        "path": "wwi-ssis/wwi-ssis/DailyETLMain.dtsx"
+      }
+    ]
+  },
+  "object_counts": {
+    "total": 431,
+    "unsupported_skipped": 18,
+    "tables": 84,
+    "tables_oltp_live": 37,
+    "tables_dw_dimension": 8,
+    "tables_dw_fact": 6,
+    "tables_dw_staging": 13,
+    "temporal_tables": 16,
+    "columnstore_tables": 10,
+    "memory_optimised_tables": 3,
+    "partitioned_tables": 7,
+    "views": 28,
+    "stored_procedures": 157,
+    "sequences": 34,
+    "user_defined_types": 4,
+    "ssis_packages": 1,
+    "ssis_tasks_total": 94
+  },
+  "etl_patterns": {
+    "scd_type_2_entities": [
+      "City",
+      "Customer",
+      "Employee",
+      "Payment Method",
+      "Stock Item",
+      "Supplier",
+      "Transaction Type"
+    ],
+    "incremental_append_entities": [
+      "Sale",
+      "Order",
+      "Purchase",
+      "Transaction"
+    ],
+    "full_snapshot_entities": [
+      "Stock Holding"
+    ],
+    "annual_extension_entities": [
+      "Date"
+    ],
+    "watermark_mechanism": "Integration.ETL Cutoff table (one row per entity)",
+    "lineage_mechanism": "Integration.Lineage table (one row per run per entity)",
+    "cutoff_buffer_minutes": 5
+  },
+  "complexity": {
+    "by_band": {
+      "HIGH": 8,
+      "LOW": 417,
+      "MEDIUM": 6
+    },
+    "avg_confidence": 0.724,
+    "hotspot_objects": [
+      {
+        "id": "OLTP:Integration.GetCityUpdates",
+        "score": 10,
+        "factors": [
+          "CURSOR(+5)",
+          "FOR\\s+SYSTEM_TIME(+3)",
+          "#\\w+(+1)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:Integration.GetCustomerUpdates",
+        "score": 10,
+        "factors": [
+          "CURSOR(+5)",
+          "FOR\\s+SYSTEM_TIME(+3)",
+          "#\\w+(+1)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:Integration.GetEmployeeUpdates",
+        "score": 10,
+        "factors": [
+          "CURSOR(+5)",
+          "FOR\\s+SYSTEM_TIME(+3)",
+          "#\\w+(+1)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:Integration.GetPaymentMethodUpdates",
+        "score": 10,
+        "factors": [
+          "CURSOR(+5)",
+          "FOR\\s+SYSTEM_TIME(+3)",
+          "#\\w+(+1)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:Integration.GetStockItemUpdates",
+        "score": 10,
+        "factors": [
+          "CURSOR(+5)",
+          "FOR\\s+SYSTEM_TIME(+3)",
+          "#\\w+(+1)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:Integration.GetSupplierUpdates",
+        "score": 10,
+        "factors": [
+          "CURSOR(+5)",
+          "FOR\\s+SYSTEM_TIME(+3)",
+          "#\\w+(+1)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:Integration.GetTransactionTypeUpdates",
+        "score": 10,
+        "factors": [
+          "CURSOR(+5)",
+          "FOR\\s+SYSTEM_TIME(+3)",
+          "#\\w+(+1)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "SSIS:DailyETLMain",
+        "score": 10,
+        "factors": []
+      },
+      {
+        "id": "OLTP:DataLoadSimulation.PickStockForCustomerOrders",
+        "score": 8,
+        "factors": [
+          "CURSOR(+5)",
+          "MERGE(+2)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:WebApi.SearchForStockItems",
+        "score": 7,
+        "factors": [
+          "FOR\\s+XML(+3)",
+          "OPENJSON(+4)"
+        ]
+      },
+      {
+        "id": "OLTP:DataLoadSimulation.InvoicePickedOrders",
+        "score": 6,
+        "factors": [
+          "CURSOR(+5)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:DataLoadSimulation.ReceivePurchaseOrders",
+        "score": 6,
+        "factors": [
+          "CURSOR(+5)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:DataLoadSimulation.RecordInvoiceDeliveries",
+        "score": 6,
+        "factors": [
+          "CURSOR(+5)",
+          "WHILE(+1)"
+        ]
+      },
+      {
+        "id": "OLTP:DataLoadSimulation.UpdateCustomFields",
+        "score": 6,
+        "factors": [
+          "CURSOR(+5)",
+          "WHILE(+1)"
+        ]
+      }
+    ]
+  },
+  "medallion_assignment": {
+    "BRONZE": 285,
+    "GOLD": 6,
+    "INFRASTRUCTURE": 38,
+    "SILVER": 102
+  },
+  "risk_distribution": {
+    "HIGH": 7,
+    "LOW": 161,
+    "MEDIUM": 7,
+    "NONE": 256
+  },
+  "dependency_graph": {
+    "nodes": 414,
+    "edges": 584,
+    "cycles": [],
+    "top_fanin": [
+      {
+        "id": "OLTP:Application.People",
+        "name": "Application.People",
+        "fan_in": 27
+      },
+      {
+        "id": "OLTP:Sales.Customers",
+        "name": "Sales.Customers",
+        "fan_in": 24
+      },
+      {
+        "id": "OLTP:Warehouse.StockItems",
+        "name": "Warehouse.StockItems",
+        "fan_in": 23
+      },
+      {
+        "id": "OLTP:Application.Cities",
+        "name": "Application.Cities",
+        "fan_in": 17
+      },
+      {
+        "id": "OLTP:Sales.Orders",
+        "name": "Sales.Orders",
+        "fan_in": 16
+      },
+      {
+        "id": "OLTP:Sales.OrderLines",
+        "name": "Sales.OrderLines",
+        "fan_in": 15
+      },
+      {
+        "id": "DW:Integration.Lineage",
+        "name": "Integration.Lineage",
+        "fan_in": 15
+      },
+      {
+        "id": "OLTP:Sales.Invoices",
+        "name": "Sales.Invoices",
+        "fan_in": 14
+      },
+      {
+        "id": "DW:Integration.ETL",
+        "name": "Integration.ETL",
+        "fan_in": 14
+      },
+      {
+        "id": "OLTP:Application.StateProvinces",
+        "name": "Application.StateProvinces",
+        "fan_in": 13
+      }
+    ]
+  },
+  "migration_scope": {
+    "in_scope": [
+      "Integration (OLTP)",
+      "Integration (DW)",
+      "Dimension",
+      "Fact",
+      "Application (reference tables)",
+      "SSIS DailyETLMain"
+    ],
+    "out_of_scope": [
+      "DataLoadSimulation",
+      "WebApi",
+      "Website",
+      "Security objects",
+      "Memory-optimised IoT tables",
+      "OLTP Sequences",
+      "Archive tables (SQL Server managed)"
+    ]
+  },
+  "critical_issues": [
+    {
+      "id": "CRI-01",
+      "issue": "geography data type",
+      "impact": "HIGH",
+      "effort_days": "2\u20133"
+    },
+    {
+      "id": "CRI-02",
+      "issue": "CURSOR loops in Get<Entity>Updates procs",
+      "impact": "HIGH",
+      "effort_days": "3\u20135"
+    },
+    {
+      "id": "CRI-03",
+      "issue": "FOR SYSTEM_TIME AS OF temporal queries",
+      "impact": "HIGH",
+      "effort_days": "1\u20132"
+    },
+    {
+      "id": "CRI-04",
+      "issue": "VARBINARY(MAX) binary column in Employee dimension",
+      "impact": "MEDIUM",
+      "effort_days": "0.5"
+    },
+    {
+      "id": "CRI-07",
+      "issue": "Memory-optimised IoT tables (no DW ETL path)",
+      "impact": "MEDIUM",
+      "effort_days": "out-of-scope"
+    }
+  ],
+  "confidence_by_section": {
+    "executive_summary": "HIGH",
+    "platform_overview": "HIGH",
+    "schema_inventory": "HIGH",
+    "etl_overview": "HIGH",
+    "object_taxonomy_tables": "HIGH",
+    "object_taxonomy_views": "HIGH",
+    "object_taxonomy_procs": "HIGH",
+    "object_taxonomy_functions": "MEDIUM",
+    "object_taxonomy_ssis": "HIGH",
+    "dependency_map": "MEDIUM",
+    "data_domains": "HIGH",
+    "load_patterns": "HIGH",
+    "operational_assumptions": "MEDIUM",
+    "tech_debt": "HIGH"
+  }
+}

@@ -1,0 +1,52 @@
+# Source: DW:Sequences.ReseedSequenceBeyondTableValues  (/Users/shivaiyer/Documents/Claude/sql-server-samples/samples/databases/wide-world-importers/wwi-dw-ssdt/wwi-dw-ssdt/Sequences/Stored Procedures/ReseedSequenceBeyondTableValues.sql)
+# Converted: PROCEDURE -> PySpark (procedural constructs preclude a direct SQL mapping).
+# Original T-SQL body is reproduced as a comment for reference.
+#
+# --- original T-SQL (truncated to 4000 chars) ---
+# CREATE PROCEDURE Sequences.ReseedSequenceBeyondTableValues
+# @SequenceName sysname,
+# @SchemaName sysname,
+# @TableName sysname,
+# @ColumnName sysname
+# AS BEGIN
+#     -- Ensures that the next sequence value is above the maximum value of the supplied table column
+#     SET NOCOUNT ON;
+# 
+#     DECLARE @SQL nvarchar(max);
+#     DECLARE @CurrentTableMaximumValue bigint;
+#     DECLARE @NewSequenceValue bigint;
+#     DECLARE @CurrentSequenceMaximumValue bigint
+#         = (SELECT CAST(current_value AS bigint) FROM sys.sequences
+#                                                 WHERE name = @SequenceName
+#                                                 AND SCHEMA_NAME(schema_id) = N'Sequences');
+#     CREATE TABLE #CurrentValue
+#     (
+#         CurrentValue bigint
+#     )
+# 
+#     SET @SQL = N'INSERT #CurrentValue (CurrentValue) SELECT COALESCE(MAX(' + QUOTENAME(@ColumnName) + N'), 0) FROM ' + QUOTENAME(@SchemaName) + N'.' + QUOTENAME(@TableName) + N';';
+#     EXECUTE (@SQL);
+#     SET @CurrentTableMaximumValue = (SELECT CurrentValue FROM #CurrentValue);
+#     DROP TABLE #CurrentValue;
+# 
+#     IF @CurrentTableMaximumValue >= @CurrentSequenceMaximumValue
+#     BEGIN
+#         SET @NewSequenceValue = @CurrentTableMaximumValue + 1;
+#         SET @SQL = N'ALTER SEQUENCE Sequences.' + QUOTENAME(@SequenceName) + N' RESTART WITH ' + CAST(@NewSequenceValue AS nvarchar(20)) + N';';
+#         EXECUTE (@SQL);
+#     END;
+# END;
+# --- end original T-SQL ---
+
+from pyspark.sql import SparkSession
+
+spark = SparkSession.getActiveSession()
+
+
+def reseedsequencebeyondtablevalues(*args, **kwargs) -> None:
+    """TODO: implement equivalent logic to the source T-SQL procedure above.
+
+    Procedural constructs detected in source requiring manual redesign:
+    - Temp table — replace with a PySpark DataFrame (if used only within the procedure body) or a Delta table in a scratch/staging schema (if state must persist across steps).
+    """
+    raise NotImplementedError('Manual conversion required — see source T-SQL above.')

@@ -1,0 +1,243 @@
+{
+  "node_count": 14,
+  "edge_count": 8,
+  "has_cycles": false,
+  "cycles": [],
+  "topological_order": [
+    "OLTP:Application.Cities",
+    "OLTP:Website.CalculateCustomerPrice",
+    "OLTP:Integration.MigrateStagedCityData",
+    "OLTP:DataLoadSimulation.FicticiousNamePool",
+    "SSIS:MinimalTestPackage",
+    "SSIS:MinimalTestPackage:Load City Dimension",
+    "OLTP:Integration.GetCityUpdates",
+    "OLTP:WebApi.Cities",
+    "SSIS:MinimalTestPackage:Migrate Staged City Data",
+    "SSIS:MinimalTestPackage:Extract Updated City Data to Staging",
+    "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time",
+    "SSIS:MinimalTestPackage:Truncate City_Staging",
+    "SSIS:MinimalTestPackage:Get Lineage Key",
+    "SSIS:MinimalTestPackage:Set TableName to City"
+  ],
+  "etl_lineage": [],
+  "nodes": {
+    "OLTP:Integration.GetCityUpdates": {
+      "id": "OLTP:Integration.GetCityUpdates",
+      "name": "GetCityUpdates",
+      "schema": "Integration",
+      "object_type": "PROCEDURE",
+      "source_project": "OLTP",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "HIGH",
+      "risk": "HIGH",
+      "fan_in": 0,
+      "fan_out": 1
+    },
+    "OLTP:WebApi.Cities": {
+      "id": "OLTP:WebApi.Cities",
+      "name": "Cities",
+      "schema": "WebApi",
+      "object_type": "VIEW",
+      "source_project": "OLTP",
+      "medallion_layer": "SILVER",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 0,
+      "fan_out": 1
+    },
+    "OLTP:Application.Cities": {
+      "id": "OLTP:Application.Cities",
+      "name": "Cities",
+      "schema": "Application",
+      "object_type": "TABLE",
+      "source_project": "OLTP",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 2,
+      "fan_out": 0
+    },
+    "OLTP:Website.CalculateCustomerPrice": {
+      "id": "OLTP:Website.CalculateCustomerPrice",
+      "name": "CalculateCustomerPrice",
+      "schema": "Website",
+      "object_type": "SCALAR_FUNCTION",
+      "source_project": "OLTP",
+      "medallion_layer": "SILVER",
+      "complexity_band": "LOW",
+      "risk": "NONE",
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "OLTP:Integration.MigrateStagedCityData": {
+      "id": "OLTP:Integration.MigrateStagedCityData",
+      "name": "MigrateStagedCityData",
+      "schema": "Integration",
+      "object_type": "PROCEDURE",
+      "source_project": "OLTP",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "NONE",
+      "fan_in": 1,
+      "fan_out": 0
+    },
+    "OLTP:DataLoadSimulation.FicticiousNamePool": {
+      "id": "OLTP:DataLoadSimulation.FicticiousNamePool",
+      "name": "FicticiousNamePool",
+      "schema": "DataLoadSimulation",
+      "object_type": "TABLE",
+      "source_project": "OLTP",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "NONE",
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "SSIS:MinimalTestPackage": {
+      "id": "SSIS:MinimalTestPackage",
+      "name": "MinimalTestPackage",
+      "schema": "ETL",
+      "object_type": "SSIS_PACKAGE",
+      "source_project": "SSIS",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "HIGH",
+      "risk": "MEDIUM",
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "SSIS:MinimalTestPackage:Load City Dimension": {
+      "id": "SSIS:MinimalTestPackage:Load City Dimension",
+      "name": "Load City Dimension",
+      "schema": "Integration",
+      "object_type": "SSIS_SEQUENCE_CONTAINER",
+      "source_project": "SSIS",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 0,
+      "fan_out": 0
+    },
+    "SSIS:MinimalTestPackage:Extract Updated City Data to Staging": {
+      "id": "SSIS:MinimalTestPackage:Extract Updated City Data to Staging",
+      "name": "Extract Updated City Data to Staging",
+      "schema": "Integration",
+      "object_type": "SSIS_DATA_FLOW",
+      "source_project": "SSIS",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 1,
+      "fan_out": 1
+    },
+    "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time": {
+      "id": "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time",
+      "name": "Get Last City ETL Cutoff Time",
+      "schema": "Integration",
+      "object_type": "SSIS_EXECUTE_SQL",
+      "source_project": "SSIS",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 1,
+      "fan_out": 1
+    },
+    "SSIS:MinimalTestPackage:Get Lineage Key": {
+      "id": "SSIS:MinimalTestPackage:Get Lineage Key",
+      "name": "Get Lineage Key",
+      "schema": "Integration",
+      "object_type": "SSIS_EXECUTE_SQL",
+      "source_project": "SSIS",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 1,
+      "fan_out": 1
+    },
+    "SSIS:MinimalTestPackage:Migrate Staged City Data": {
+      "id": "SSIS:MinimalTestPackage:Migrate Staged City Data",
+      "name": "Migrate Staged City Data",
+      "schema": "Integration",
+      "object_type": "SSIS_EXECUTE_SQL",
+      "source_project": "SSIS",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 1,
+      "fan_out": 1
+    },
+    "SSIS:MinimalTestPackage:Set TableName to City": {
+      "id": "SSIS:MinimalTestPackage:Set TableName to City",
+      "name": "Set TableName to City",
+      "schema": "Integration",
+      "object_type": "SSIS_EXPRESSION",
+      "source_project": "SSIS",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 0,
+      "fan_out": 1
+    },
+    "SSIS:MinimalTestPackage:Truncate City_Staging": {
+      "id": "SSIS:MinimalTestPackage:Truncate City_Staging",
+      "name": "Truncate City_Staging",
+      "schema": "Integration",
+      "object_type": "SSIS_EXECUTE_SQL",
+      "source_project": "SSIS",
+      "medallion_layer": "BRONZE",
+      "complexity_band": "LOW",
+      "risk": "LOW",
+      "fan_in": 1,
+      "fan_out": 1
+    }
+  },
+  "edges": [
+    {
+      "from": "OLTP:Integration.GetCityUpdates",
+      "to": "OLTP:Application.Cities",
+      "edge_type": "SQL_REFERENCE",
+      "label": "Application.Cities"
+    },
+    {
+      "from": "OLTP:WebApi.Cities",
+      "to": "OLTP:Application.Cities",
+      "edge_type": "SQL_REFERENCE",
+      "label": "Application.Cities"
+    },
+    {
+      "from": "SSIS:MinimalTestPackage:Truncate City_Staging",
+      "to": "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time",
+      "edge_type": "SSIS_CONTROL_FLOW_SUCCESS",
+      "label": "SUCCESS"
+    },
+    {
+      "from": "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time",
+      "to": "SSIS:MinimalTestPackage:Extract Updated City Data to Staging",
+      "edge_type": "SSIS_CONTROL_FLOW_SUCCESS",
+      "label": "SUCCESS"
+    },
+    {
+      "from": "SSIS:MinimalTestPackage:Set TableName to City",
+      "to": "SSIS:MinimalTestPackage:Get Lineage Key",
+      "edge_type": "SSIS_CONTROL_FLOW_SUCCESS",
+      "label": "SUCCESS"
+    },
+    {
+      "from": "SSIS:MinimalTestPackage:Extract Updated City Data to Staging",
+      "to": "SSIS:MinimalTestPackage:Migrate Staged City Data",
+      "edge_type": "SSIS_CONTROL_FLOW_SUCCESS",
+      "label": "SUCCESS"
+    },
+    {
+      "from": "SSIS:MinimalTestPackage:Get Lineage Key",
+      "to": "SSIS:MinimalTestPackage:Truncate City_Staging",
+      "edge_type": "SSIS_CONTROL_FLOW_SUCCESS",
+      "label": "SUCCESS"
+    },
+    {
+      "from": "SSIS:MinimalTestPackage:Migrate Staged City Data",
+      "to": "OLTP:Integration.MigrateStagedCityData",
+      "edge_type": "CALLS_PROC",
+      "label": "Integration.MigrateStagedCityData"
+    }
+  ]
+}

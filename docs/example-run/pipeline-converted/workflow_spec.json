@@ -1,0 +1,2093 @@
+{
+  "name": "wwi_dailyetlmain",
+  "description": "Converted from SSIS package DailyETLMain",
+  "schedule": {
+    "quartz_cron_expression": "0 0 2 * * ?",
+    "timezone_id": "UTC",
+    "pause_status": "UNPAUSED"
+  },
+  "email_notifications": {
+    "on_failure": [
+      "<TODO: distribution list>"
+    ]
+  },
+  "tasks": [
+    {
+      "task_key": "calculate_etl_cutoff_time_backup",
+      "description": "Converted from SSIS task 'Calculate ETL Cutoff Time backup' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/calculate_etl_cutoff_time_backup.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "ensure_date_dimension_includes_current_year",
+      "description": "Converted from SSIS task 'Ensure Date Dimension includes current year' (SSIS_EXECUTE_SQL)",
+      "depends_on": [],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/ensure_date_dimension_includes_current_year.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_city_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated City Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_city_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_city_data_to_staging.py",
+        "base_parameters": {
+          "entity": "City"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_city_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last City ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_city_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_city_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "City"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_city_data",
+      "description": "Converted from SSIS task 'Migrate Staged City Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_city_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_city_data.py",
+        "base_parameters": {
+          "entity": "City"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_city",
+      "description": "Converted from SSIS task 'Set TableName to City' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_city.py",
+        "base_parameters": {
+          "entity": "City"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_city_staging",
+      "description": "Converted from SSIS task 'Truncate City_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_city_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_customer_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Customer Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_customer_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_customer_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Customer"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_customer_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Customer ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_customer_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_customer_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Customer"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_customer_data",
+      "description": "Converted from SSIS task 'Migrate Staged Customer Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_customer_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_customer_data.py",
+        "base_parameters": {
+          "entity": "Customer"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_customer",
+      "description": "Converted from SSIS task 'Set TableName to Customer' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_customer.py",
+        "base_parameters": {
+          "entity": "Customer"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_customer_staging",
+      "description": "Converted from SSIS task 'Truncate Customer_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_customer_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_employee_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Employee Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_employee_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_employee_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Employee"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_employee_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Employee ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_employee_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_employee_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Employee"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_employee_data",
+      "description": "Converted from SSIS task 'Migrate Staged Employee Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_employee_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_employee_data.py",
+        "base_parameters": {
+          "entity": "Employee"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_employee",
+      "description": "Converted from SSIS task 'Set TableName to Employee' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_employee.py",
+        "base_parameters": {
+          "entity": "Employee"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_employee_staging",
+      "description": "Converted from SSIS task 'Truncate Employee_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_employee_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_movement_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Movement Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_movement_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_movement_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_movement_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Movement ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_movement_staging"
+        },
+        {
+          "task_key": "truncate_order_staging"
+        },
+        {
+          "task_key": "truncate_purchase_staging"
+        },
+        {
+          "task_key": "truncate_sale_staging"
+        },
+        {
+          "task_key": "truncate_stockholding_staging"
+        },
+        {
+          "task_key": "truncate_transaction_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_movement_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_movement_data",
+      "description": "Converted from SSIS task 'Migrate Staged Movement Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_movement_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_movement_data.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_movement",
+      "description": "Converted from SSIS task 'Set TableName to Movement' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_movement.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_movement_staging",
+      "description": "Converted from SSIS task 'Truncate Movement_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_movement_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_order_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Order Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_movement_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_order_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Order"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_movement_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Movement ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_movement_staging"
+        },
+        {
+          "task_key": "truncate_order_staging"
+        },
+        {
+          "task_key": "truncate_purchase_staging"
+        },
+        {
+          "task_key": "truncate_sale_staging"
+        },
+        {
+          "task_key": "truncate_stockholding_staging"
+        },
+        {
+          "task_key": "truncate_transaction_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_movement_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_order_data",
+      "description": "Converted from SSIS task 'Migrate Staged Order Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_order_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_order_data.py",
+        "base_parameters": {
+          "entity": "Order"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_order",
+      "description": "Converted from SSIS task 'Set TableName to Order' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_order.py",
+        "base_parameters": {
+          "entity": "Order"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_order_staging",
+      "description": "Converted from SSIS task 'Truncate Order_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_order_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_payment_method_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Payment Method Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_payment_method_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_payment_method_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Payment Method"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_payment_method_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Payment Method ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_paymentmethod_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_payment_method_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Payment Method"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_payment_method_data",
+      "description": "Converted from SSIS task 'Migrate Staged Payment Method Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_payment_method_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_payment_method_data.py",
+        "base_parameters": {
+          "entity": "Payment Method"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_payment_method",
+      "description": "Converted from SSIS task 'Set TableName to Payment Method' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_payment_method.py",
+        "base_parameters": {
+          "entity": "Payment Method"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_paymentmethod_staging",
+      "description": "Converted from SSIS task 'Truncate PaymentMethod_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_paymentmethod_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_purchase_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Purchase Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_movement_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_purchase_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Purchase"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_movement_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Movement ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_movement_staging"
+        },
+        {
+          "task_key": "truncate_order_staging"
+        },
+        {
+          "task_key": "truncate_purchase_staging"
+        },
+        {
+          "task_key": "truncate_sale_staging"
+        },
+        {
+          "task_key": "truncate_stockholding_staging"
+        },
+        {
+          "task_key": "truncate_transaction_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_movement_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_purchase_data",
+      "description": "Converted from SSIS task 'Migrate Staged Purchase Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_purchase_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_purchase_data.py",
+        "base_parameters": {
+          "entity": "Purchase"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_purchase",
+      "description": "Converted from SSIS task 'Set TableName to Purchase' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_purchase.py",
+        "base_parameters": {
+          "entity": "Purchase"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_purchase_staging",
+      "description": "Converted from SSIS task 'Truncate Purchase_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_purchase_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_sale_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Sale Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_movement_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_sale_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Sale"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_movement_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Movement ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_movement_staging"
+        },
+        {
+          "task_key": "truncate_order_staging"
+        },
+        {
+          "task_key": "truncate_purchase_staging"
+        },
+        {
+          "task_key": "truncate_sale_staging"
+        },
+        {
+          "task_key": "truncate_stockholding_staging"
+        },
+        {
+          "task_key": "truncate_transaction_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_movement_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_sale_data",
+      "description": "Converted from SSIS task 'Migrate Staged Sale Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_sale_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_sale_data.py",
+        "base_parameters": {
+          "entity": "Sale"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_sale",
+      "description": "Converted from SSIS task 'Set TableName to Sale' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_sale.py",
+        "base_parameters": {
+          "entity": "Sale"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_sale_staging",
+      "description": "Converted from SSIS task 'Truncate Sale_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_sale_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_all_stock_holding_data_to_staging",
+      "description": "Converted from SSIS task 'Extract All Stock Holding Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_movement_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_all_stock_holding_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Stock Holding"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_movement_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Movement ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_movement_staging"
+        },
+        {
+          "task_key": "truncate_order_staging"
+        },
+        {
+          "task_key": "truncate_purchase_staging"
+        },
+        {
+          "task_key": "truncate_sale_staging"
+        },
+        {
+          "task_key": "truncate_stockholding_staging"
+        },
+        {
+          "task_key": "truncate_transaction_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_movement_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_stock_holding_data",
+      "description": "Converted from SSIS task 'Migrate Staged Stock Holding Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_all_stock_holding_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_stock_holding_data.py",
+        "base_parameters": {
+          "entity": "Stock Holding"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_stock_holding",
+      "description": "Converted from SSIS task 'Set TableName to Stock Holding' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_stock_holding.py",
+        "base_parameters": {
+          "entity": "Stock Holding"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_stockholding_staging",
+      "description": "Converted from SSIS task 'Truncate StockHolding_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_stockholding_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_stock_item_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Stock Item Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_stock_item_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_stock_item_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Stock Item"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_stock_item_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Stock Item ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_stockitem_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_stock_item_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Stock Item"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_stock_item_data",
+      "description": "Converted from SSIS task 'Migrate Staged Stock Item Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_stock_item_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_stock_item_data.py",
+        "base_parameters": {
+          "entity": "Stock Item"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_stock_item",
+      "description": "Converted from SSIS task 'Set TableName to Stock Item' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_stock_item.py",
+        "base_parameters": {
+          "entity": "Stock Item"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_stockitem_staging",
+      "description": "Converted from SSIS task 'Truncate StockItem_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_stockitem_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_supplier_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Supplier Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_supplier_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_supplier_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Supplier"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_supplier_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Supplier ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_supplier_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_supplier_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Supplier"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_supplier_data",
+      "description": "Converted from SSIS task 'Migrate Staged Supplier Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_supplier_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_supplier_data.py",
+        "base_parameters": {
+          "entity": "Supplier"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_supplier",
+      "description": "Converted from SSIS task 'Set TableName to Supplier' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_supplier.py",
+        "base_parameters": {
+          "entity": "Supplier"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_supplier_staging",
+      "description": "Converted from SSIS task 'Truncate Supplier_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_supplier_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_transaction_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Transaction Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_movement_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_transaction_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Transaction"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_movement_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Movement ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_movement_staging"
+        },
+        {
+          "task_key": "truncate_order_staging"
+        },
+        {
+          "task_key": "truncate_purchase_staging"
+        },
+        {
+          "task_key": "truncate_sale_staging"
+        },
+        {
+          "task_key": "truncate_stockholding_staging"
+        },
+        {
+          "task_key": "truncate_transaction_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_movement_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Movement"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_transaction_data",
+      "description": "Converted from SSIS task 'Migrate Staged Transaction Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_transaction_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_transaction_data.py",
+        "base_parameters": {
+          "entity": "Transaction"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_transaction",
+      "description": "Converted from SSIS task 'Set TableName to Transaction' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_transaction.py",
+        "base_parameters": {
+          "entity": "Transaction"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_transaction_staging",
+      "description": "Converted from SSIS task 'Truncate Transaction_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_transaction_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "extract_updated_transaction_type_data_to_staging",
+      "description": "Converted from SSIS task 'Extract Updated Transaction Type Data to Staging' (SSIS_DATA_FLOW)",
+      "depends_on": [
+        {
+          "task_key": "get_last_transaction_type_etl_cutoff_time"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/extract_updated_transaction_type_data_to_staging.py",
+        "base_parameters": {
+          "entity": "Transaction Type"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_last_transaction_type_etl_cutoff_time",
+      "description": "Converted from SSIS task 'Get Last Transaction Type ETL Cutoff Time' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "truncate_transactiontype_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_last_transaction_type_etl_cutoff_time.py",
+        "base_parameters": {
+          "entity": "Transaction Type"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "get_lineage_key",
+      "description": "Converted from SSIS task 'Get Lineage Key' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "set_tablename_to_city"
+        },
+        {
+          "task_key": "set_tablename_to_customer"
+        },
+        {
+          "task_key": "set_tablename_to_employee"
+        },
+        {
+          "task_key": "set_tablename_to_movement"
+        },
+        {
+          "task_key": "set_tablename_to_order"
+        },
+        {
+          "task_key": "set_tablename_to_payment_method"
+        },
+        {
+          "task_key": "set_tablename_to_purchase"
+        },
+        {
+          "task_key": "set_tablename_to_sale"
+        },
+        {
+          "task_key": "set_tablename_to_stock_holding"
+        },
+        {
+          "task_key": "set_tablename_to_stock_item"
+        },
+        {
+          "task_key": "set_tablename_to_supplier"
+        },
+        {
+          "task_key": "set_tablename_to_transaction"
+        },
+        {
+          "task_key": "set_tablename_to_transaction_type"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/get_lineage_key.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "migrate_staged_transaction_type_data",
+      "description": "Converted from SSIS task 'Migrate Staged Transaction Type Data' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "extract_updated_transaction_type_data_to_staging"
+        }
+      ],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/migrate_staged_transaction_type_data.py",
+        "base_parameters": {
+          "entity": "Transaction Type"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "set_tablename_to_transaction_type",
+      "description": "Converted from SSIS task 'Set TableName to Transaction Type' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/set_tablename_to_transaction_type.py",
+        "base_parameters": {
+          "entity": "Transaction Type"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "truncate_transactiontype_staging",
+      "description": "Converted from SSIS task 'Truncate TransactionType_Staging' (SSIS_EXECUTE_SQL)",
+      "depends_on": [
+        {
+          "task_key": "get_lineage_key"
+        }
+      ],
+      "sql_task": {
+        "warehouse_id": "<TODO: SQL warehouse id>",
+        "file": {
+          "path": "databricks_sql/truncate_transactiontype_staging.sql"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "trim_any_milliseconds",
+      "description": "Converted from SSIS task 'Trim Any Milliseconds' (SSIS_EXPRESSION)",
+      "depends_on": [],
+      "python_wheel_task": null,
+      "notebook_task": {
+        "notebook_path": "./ssis_tasks/trim_any_milliseconds.py",
+        "base_parameters": {
+          "entity": "unknown"
+        }
+      },
+      "retry_on_timeout": false,
+      "max_retries": 1,
+      "timeout_seconds": 3600
+    }
+  ],
+  "parameters": [
+    {
+      "name": "environment",
+      "default": "dev"
+    }
+  ],
+  "connection_managers": {
+    "{E8464E14-D126-4B86-AFFB-295B0D3506F4}": {
+      "source_id": "WWI_Source_DB",
+      "source_type": "OLEDB",
+      "target_type": "Lakehouse Federation connection (or JDBC + Databricks secret scope)",
+      "target_config": {
+        "secret_scope": "wwi-source-db-<env>",
+        "secret_keys": [
+          "jdbc_url",
+          "username",
+          "password"
+        ],
+        "jdbc_url_template": "jdbc:sqlserver://<host>:1433;databaseName=WideWorldImporters"
+      },
+      "rationale": "Source OLTP system remains external; credentials must never be hardcoded in notebooks \u2014 use a Databricks secret scope referenced from a Unity Catalog connection (Lakehouse Federation) or directly in the Spark JDBC read options."
+    },
+    "{7C3E3ECC-C5AD-4675-9618-FC08465F8BC9}": {
+      "source_id": "WWI_DW_Destination_DB",
+      "source_type": "OLEDB",
+      "target_type": "Unity Catalog (no connection object needed)",
+      "target_config": {
+        "catalog": "wwi_<env>"
+      },
+      "rationale": "The destination DW becomes the Databricks workspace itself \u2014 writes go directly to Delta tables in the wwi_<env> catalog via Spark/Databricks SQL, replacing the OLE DB destination connection entirely."
+    }
+  },
+  "variables": [
+    {
+      "source_variable": "LastETLCutoffTime",
+      "namespace": "User",
+      "source_value_sample": "4/11/2016 10:39:10 AM",
+      "target": "ops.etl_watermark Delta table column (read/written by the orchestration task, not a job parameter \u2014 must persist across runs)"
+    },
+    {
+      "source_variable": "LineageKey",
+      "namespace": "User",
+      "source_value_sample": "0",
+      "target": "Computed value inside the MERGE task (MAX(lineage_key)+1 or IDENTITY column) \u2014 not passed as a parameter"
+    },
+    {
+      "source_variable": "TableName",
+      "namespace": "User",
+      "source_value_sample": null,
+      "target": "Workflow job parameter `entity_name`, templated into each per-entity job run"
+    },
+    {
+      "source_variable": "TargetETLCutoffTime",
+      "namespace": "User",
+      "source_value_sample": "4/13/2016 11:25:23 AM",
+      "target": "ops.etl_watermark Delta table column (read/written by the orchestration task, not a job parameter \u2014 must persist across runs)"
+    }
+  ]
+}

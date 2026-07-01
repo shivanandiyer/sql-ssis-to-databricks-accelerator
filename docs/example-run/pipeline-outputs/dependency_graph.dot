@@ -1,0 +1,26 @@
+digraph WWI {
+  rankdir=LR;
+  node [shape=box fontsize=10];
+  "OLTP:Integration.GetCityUpdates" [label="Integration.GetCityUpdates" fillcolor="burlywood" style=filled];
+  "OLTP:WebApi.Cities" [label="WebApi.Cities" fillcolor="lightblue" style=filled];
+  "OLTP:Application.Cities" [label="Application.Cities" fillcolor="burlywood" style=filled];
+  "OLTP:Website.CalculateCustomerPrice" [label="Website.CalculateCustomerPrice" fillcolor="lightblue" style=filled];
+  "OLTP:Integration.MigrateStagedCityData" [label="Integration.MigrateStagedCityData" fillcolor="burlywood" style=filled];
+  "OLTP:DataLoadSimulation.FicticiousNamePool" [label="DataLoadSimulation.FicticiousNamePool" fillcolor="burlywood" style=filled];
+  "SSIS:MinimalTestPackage" [label="ETL.MinimalTestPackage" fillcolor="burlywood" style=filled];
+  "SSIS:MinimalTestPackage:Load City Dimension" [label="Integration.Load City Dimension" fillcolor="burlywood" style=filled];
+  "SSIS:MinimalTestPackage:Extract Updated City Data to Staging" [label="Integration.Extract Updated City Data to Staging" fillcolor="burlywood" style=filled];
+  "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time" [label="Integration.Get Last City ETL Cutoff Time" fillcolor="burlywood" style=filled];
+  "SSIS:MinimalTestPackage:Get Lineage Key" [label="Integration.Get Lineage Key" fillcolor="burlywood" style=filled];
+  "SSIS:MinimalTestPackage:Migrate Staged City Data" [label="Integration.Migrate Staged City Data" fillcolor="burlywood" style=filled];
+  "SSIS:MinimalTestPackage:Set TableName to City" [label="Integration.Set TableName to City" fillcolor="burlywood" style=filled];
+  "SSIS:MinimalTestPackage:Truncate City_Staging" [label="Integration.Truncate City_Staging" fillcolor="burlywood" style=filled];
+  "OLTP:Integration.GetCityUpdates" -> "OLTP:Application.Cities" [label="Application.Cities"];
+  "OLTP:WebApi.Cities" -> "OLTP:Application.Cities" [label="Application.Cities"];
+  "SSIS:MinimalTestPackage:Truncate City_Staging" -> "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time" [label="SUCCESS"];
+  "SSIS:MinimalTestPackage:Get Last City ETL Cutoff Time" -> "SSIS:MinimalTestPackage:Extract Updated City Data to Staging" [label="SUCCESS"];
+  "SSIS:MinimalTestPackage:Set TableName to City" -> "SSIS:MinimalTestPackage:Get Lineage Key" [label="SUCCESS"];
+  "SSIS:MinimalTestPackage:Extract Updated City Data to Staging" -> "SSIS:MinimalTestPackage:Migrate Staged City Data" [label="SUCCESS"];
+  "SSIS:MinimalTestPackage:Get Lineage Key" -> "SSIS:MinimalTestPackage:Truncate City_Staging" [label="SUCCESS"];
+  "SSIS:MinimalTestPackage:Migrate Staged City Data" -> "OLTP:Integration.MigrateStagedCityData" [label="Integration.MigrateStagedCityData"];
+}
